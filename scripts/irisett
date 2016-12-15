@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+
+"""Main command line entry point for irisett.
+
+See irisett/main.py to see where things actually start up.
+"""
+
+from irisett.main import main
+
+if __name__ == '__main__':
+    main()

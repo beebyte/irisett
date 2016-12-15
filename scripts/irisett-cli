@@ -1,0 +1,617 @@
+#!/usr/bin/env python3
+
+import argparse
+import requests
+import json
+from pprint import pprint
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Irisett command line client.')
+    parser.add_argument('-H', '--host', default='localhost', help='Irisett server')
+    parser.add_argument('-P', '--port', default='10000', help='Irisett port')
+    parser.add_argument('-u', '--user', default='admin', help='Irisett username')
+    parser.add_argument('-p', '--password', help='Irisett password', required=True)
+
+    subparsers = parser.add_subparsers(title='Commands',
+                                       description='Commands to send to the irisett server.')
+
+    cmd = subparsers.add_parser('add-active-monitor', help='Add active monitor')
+    cmd.add_argument('-d', '--monitor-def', type=int, required=True, help='Monitor definition id')
+    cmd.add_argument('-a', '--argument', action='append', help='key:value argument pairs (repeat as necessary)')
+    cmd.set_defaults(func=add_active_monitor)
+
+    cmd = subparsers.add_parser('update-active-monitor', help='Update active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.add_argument('-a', '--argument', action='append', help='key:value argument pairs (repeat as necessary)')
+    cmd.set_defaults(func=update_active_monitor)
+
+    cmd = subparsers.add_parser('schedule-active-monitor', help='Schedule immediate check for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=schedule_active_monitor)
+
+    cmd = subparsers.add_parser('enable-active-monitor-checks', help='Enable checks for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=enable_active_monitor_checks)
+
+    cmd = subparsers.add_parser('disable-active-monitor-checks', help='Disable checks for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=disable_active_monitor_checks)
+
+    cmd = subparsers.add_parser('enable-active-monitor-alerts', help='Enable alerts for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=enable_active_monitor_alerts)
+
+    cmd = subparsers.add_parser('disable-active-monitor-alerts', help='Enable alerts for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=disable_active_monitor_alerts)
+
+    cmd = subparsers.add_parser('active-monitor-test-notification',
+                                help='Test sending alert notifications for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=active_monitor_test_notification)
+
+    cmd = subparsers.add_parser('delete-active-monitor', help='Delete active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=delete_active_monitor)
+
+    cmd = subparsers.add_parser('get-active-monitors', help='Get active monitors')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_active_monitors)
+
+    cmd = subparsers.add_parser('get-active-monitor-defs', help='List active monitor definitions')
+    cmd.add_argument('-i', '--def-id', type=int, required=False, help='Monitor defintion id')
+    cmd.set_defaults(func=get_active_monitor_defs)
+
+    cmd = subparsers.add_parser('add-active-monitor-def', help='Add active monitor definition')
+    cmd.add_argument('--name', required=True, help='Definition name')
+    cmd.add_argument('--description', required=True, help='Definition description')
+    cmd.add_argument('--active', default=False, action='store_true', help='Active')
+    cmd.add_argument('--cmdline-filename', required=True, help='Nagios plugin filename/path')
+    cmd.add_argument('--cmdline-args-tmpl', required=True, help='Nagios plugin argument template')
+    cmd.add_argument('--description-tmpl', required=True, help='Monitor description template')
+    cmd.set_defaults(func=add_active_monitor_def)
+
+    cmd = subparsers.add_parser('delete-active-monitor-def', help='Delete active monitor definition')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor definition id')
+    cmd.set_defaults(func=delete_active_monitor_def)
+
+    cmd = subparsers.add_parser('update-active-monitor-def', help='Update active monitor definition')
+    cmd.add_argument('--name', required=False, help='Definition name')
+    cmd.add_argument('--description', required=False, help='Definition description')
+    cmd.add_argument('--active', action='store_true', help='Set active')
+    cmd.add_argument('--inactive', action='store_true', help='Set inactive')
+    cmd.add_argument('--cmdline-filename', required=False, help='Nagios plugin filename/path')
+    cmd.add_argument('--cmdline-args-tmpl', required=False, help='Nagios plugin argument template')
+    cmd.add_argument('--description-tmpl', required=False, help='Monitor description template')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor definition id')
+    cmd.set_defaults(func=update_active_monitor_def)
+
+    cmd = subparsers.add_parser('set-active-monitor-def-arg', help='Set active monitor definition argument')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor definition id')
+    cmd.add_argument('--name', required=True, help='Argument name')
+    cmd.add_argument('--display-name', required=True, help='Display name')
+    cmd.add_argument('--description', default='', help='Description')
+    cmd.add_argument('--required', action='store_true', help='Required argument')
+    cmd.add_argument('--default', default='', help='Default value')
+    cmd.set_defaults(func=set_active_monitor_def_arg)
+
+    cmd = subparsers.add_parser('delete-active-monitor-def-arg', help='Delete active monitor definition argument')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor definition id')
+    cmd.add_argument('-n', '--name', required=True, help='Argument name')
+    cmd.set_defaults(func=delete_active_monitor_def_arg)
+
+    cmd = subparsers.add_parser('get-contacts', help='Get contacts')
+    cmd.add_argument('-i', '--contact-id', type=int, required=False, help='Contact id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_contacts)
+
+    cmd = subparsers.add_parser('add-contact', help='Add contact')
+    cmd.add_argument('--name', required=True, help='Contact name')
+    cmd.add_argument('--email', required=False, help='Contact email')
+    cmd.add_argument('--phone', required=False, help='Contact phone')
+    cmd.add_argument('--active', default=True, action='store_true', help='Active')
+    cmd.set_defaults(func=add_contact)
+
+    cmd = subparsers.add_parser('update-contact', help='Update contact')
+    cmd.add_argument('--name', required=False, help='Contact name')
+    cmd.add_argument('--email', required=False, help='Contact email')
+    cmd.add_argument('--phone', required=False, help='Contact phone')
+    cmd.add_argument('--unset-email', action='store_true', help='Unset email')
+    cmd.add_argument('--unset-phone', action='store_true', help='Unset phone')
+    cmd.add_argument('--active', action='store_true', help='Set active')
+    cmd.add_argument('--inactive', action='store_true', help='Set inactive')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Contact id')
+    cmd.set_defaults(func=update_contact)
+
+    cmd = subparsers.add_parser('delete-contact', help='Delete contact')
+    cmd.add_argument('-i', '--contact-id', type=int, required=True, help='Contact id')
+    cmd.set_defaults(func=delete_contact)
+
+    cmd = subparsers.add_parser('set-metadata', help='Set metadata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-d', '--metadict', action='append', help='key:value argument pairs (repeat as necessary)')
+    cmd.set_defaults(func=add_metadata)
+
+    cmd = subparsers.add_parser('delete-metadata', help='Delete metadata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', action='append', help='keys to remove (leave blank to remove all keys)')
+    cmd.set_defaults(func=delete_metadata)
+
+    cmd = subparsers.add_parser('add-active-monitor-contact', help='Add active monitor contact')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=add_active_monitor_contact)
+
+    cmd = subparsers.add_parser('delete-active-monitor-contact', help='Delete active monitor contact')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=delete_active_monitor_contact)
+
+    cmd = subparsers.add_parser('get-active-monitor-contacts', help='Get contact for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=get_active_monitor_contacts)
+
+    cmd = subparsers.add_parser('get-active-monitor-alerts', help='Get active monitor alerts')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_active_monitor_alerts)
+
+    cmd = subparsers.add_parser('set-bindata', help='Set bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.add_argument('-v', '--value', required=True, help='Bindata value')
+    cmd.set_defaults(func=add_bindata)
+
+    cmd = subparsers.add_parser('delete-bindata', help='Delete bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.set_defaults(func=delete_bindata)
+
+    cmd = subparsers.add_parser('get-bindata', help='Get bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.set_defaults(func=get_bindata)
+
+    cmd = subparsers.add_parser('get-stats', help='Get statistics for a irisett server')
+    cmd.set_defaults(func=get_stats)
+
+    args = parser.parse_args()
+    return parser, args
+
+
+def add_active_monitor(args):
+    mon_args = {}
+    if args.argument:
+        for arg in args.argument:
+            key, value = arg.split(':', 1)
+            mon_args[key] = value
+    data = {
+        'monitor_def': args.monitor_def,
+        'args': mon_args,
+    }
+    url = 'http://%s:%s/active_monitor/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def update_active_monitor(args):
+    mon_args = {}
+    if args.argument:
+        for arg in args.argument:
+            key, value = arg.split(':', 1)
+            mon_args[key] = value
+    data = {
+        'args': mon_args,
+    }
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def enable_active_monitor_checks(args):
+    data = {'checks_enabled': True}
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def disable_active_monitor_checks(args):
+    data = {'checks_enabled': False}
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def enable_active_monitor_alerts(args):
+    data = {'alerts_enabled': True}
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def disable_active_monitor_alerts(args):
+    data = {'alerts_enabled': False}
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def schedule_active_monitor(args):
+    url = 'http://%s:%s/active_monitor/?id=%s&schedule=1' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def active_monitor_test_notification(args):
+    url = 'http://%s:%s/active_monitor/?id=%s&test_notification=1' % (args.host, args.port, args.monitor_id)
+    request = requests.put(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_active_monitor(args):
+    url = 'http://%s:%s/active_monitor/?id=%s' % (args.host, args.port, args.monitor_id)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_active_monitors(args):
+    url = 'http://%s:%s/active_monitor/?include_metadata=1' % (args.host, args.port)
+    if args.monitor_id:
+        url = '%s&id=%s' % (url, args.monitor_id)
+    elif args.metadata_key and args.metadata_value:
+        url = '%s&meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def get_active_monitor_defs(args):
+    url = 'http://%s:%s/active_monitor_def/' % (args.host, args.port)
+    if args.def_id:
+        url = '%s?id=%s' % (url, args.def_id)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_active_monitor_def(args):
+    data = {
+        'name': args.name,
+        'description': args.description,
+        'active': args.active,
+        'cmdline_filename': args.cmdline_filename,
+        'cmdline_args_tmpl': args.cmdline_args_tmpl,
+        'description_tmpl': args.description_tmpl,
+    }
+    url = 'http://%s:%s/active_monitor_def/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_active_monitor_def(args):
+    url = 'http://%s:%s/active_monitor_def/?id=%s' % (args.host, args.port, args.def_id)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def update_active_monitor_def(args):
+    data = {}
+    if args.name:
+        data['name'] = args.name
+    if args.description:
+        data['description'] = args.description
+    if args.active:
+        data['active'] = True
+    if args.inactive:
+        data['active'] = False
+    if args.cmdline_filename:
+        data['cmdline_filename'] = args.cmdline_filename
+    if args.cmdline_args_tmpl:
+        data['cmdline_args_tmpl'] = args.cmdline_args_tmpl
+    if args.description_tmpl:
+        data['description_tmpl'] = args.description_tmpl
+    url = 'http://%s:%s/active_monitor_def/?id=%s' % (args.host, args.port, args.def_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_active_monitor_def_arg(args):
+    url = 'http://%s:%s/active_monitor_def_arg/?id=%s&name=%s' % (args.host, args.port, args.def_id, args.name)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def set_active_monitor_def_arg(args):
+    url = 'http://%s:%s/active_monitor_def_arg/?id=%s' % (args.host, args.port, args.def_id)
+    data = {
+        'name': args.name,
+        'display_name': args.display_name,
+        'description': args.description,
+        'required': args.required,
+        'default_value': args.default,
+    }
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_contacts(args):
+    url = 'http://%s:%s/contact/' % (args.host, args.port)
+    if args.contact_id:
+        url = '%s?id=%s' % (url, args.contact_id)
+    elif args.metadata_key and args.metadata_value:
+        url = '%s?meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_contact(args):
+    data = {
+        'name': args.name
+    }
+    if not args.email and not args.phone:
+        print('Must include email or phone')
+        return
+    if args.email:
+        data['email'] = args.email
+    if args.phone:
+        data['phone'] = args.phone
+    data['active'] = args.active
+    url = 'http://%s:%s/contact/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def update_contact(args):
+    data = {}
+    if args.name:
+        data['name'] = args.name
+    if args.email:
+        data['email'] = args.email
+    if args.phone:
+        data['phone'] = args.phone
+    if args.active:
+        data['active'] = True
+    if args.inactive:
+        data['active'] = False
+    if args.unset_phone:
+        data['phone'] = None
+    if args.unset_email:
+        data['email'] = None
+    url = 'http://%s:%s/contact/?id=%s' % (args.host, args.port, args.def_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_contact(args):
+    url = 'http://%s:%s/contact/?id=%s' % (args.host, args.port, args.contact_id)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def add_metadata(args):
+    metadict = {}
+    if args.metadict:
+        for arg in args.metadict:
+            key, value = arg.split(':', 1)
+            metadict[key] = value
+    if not metadict:
+        print('Must supply at least one value for the metadict.')
+        return
+    data = {
+        'object_type': args.object_type,
+        'object_id': args.object_id,
+        'metadict': metadict
+    }
+    url = 'http://%s:%s/metadata/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_metadata(args):
+    data = {
+        'object_type': args.object_type,
+        'object_id': args.object_id,
+    }
+    if args.key:
+        data['keys'] = args.key
+    url = 'http://%s:%s/metadata/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_active_monitor_contacts(args):
+    url = 'http://%s:%s/active_monitor_contact/' % (args.host, args.port)
+    url = '%s?monitor_id=%s' % (url, args.monitor_id)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_active_monitor_contact(args):
+    data = {
+        'monitor_id': args.monitor_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/active_monitor_contact/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_active_monitor_contact(args):
+    data = {
+        'monitor_id': args.monitor_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/active_monitor_contact/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_active_monitor_alerts(args):
+    url = 'http://%s:%s/active_monitor_alert/' % (args.host, args.port)
+    if args.monitor_id:
+        url = '%s?monitor_id=%s' % (url, args.monitor_id)
+    elif args.metadata_key and args.metadata_value:
+        url = '%s?meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_bindata(args):
+    url = 'http://%s:%s/bindata/?object_type=%s&object_id=%s&key=%s' % (
+        args.host, args.port, args.object_type, args.object_id, args.key)
+    request = requests.post(url=url, data=args.value.encode('utf-8'),
+                            auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+
+
+def delete_bindata(args):
+    url = 'http://%s:%s/bindata/?object_type=%s&object_id=%s&key=%s' % (
+        args.host, args.port, args.object_type, args.object_id, args.key)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+
+
+def get_bindata(args):
+    url = 'http://%s:%s/bindata/?object_type=%s&object_id=%s&key=%s' % (
+        args.host, args.port, args.object_type, args.object_id, args.key)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    print(request.content)
+
+
+def get_stats(args):
+    url = 'http://%s:%s/statistics/' % (
+        args.host, args.port)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def main():
+    parser, args = parse_args()
+    if not hasattr(args, 'func'):
+        parser.print_help()
+    else:
+        args.func(args)
+
+
+if __name__ == '__main__':
+    main()

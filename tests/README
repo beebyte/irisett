@@ -1,0 +1,2 @@
+Most tests are currently built outside the source tree while we work out
+proper testing procedures for asyncio code.
