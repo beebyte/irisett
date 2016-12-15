@@ -13,7 +13,8 @@ Monitors
 ```irisett-cli -p webapi-password add-active-monitor -d 1 -a hostname:127.0.0.1```
 
 
-```irisett-cli -p webapi-password get-active-monitors -i 1
+```
+irisett-cli -p webapi-password get-active-monitors -i 1
 
 [{'alert_id': None,
   'alerts_enabled': 1,
