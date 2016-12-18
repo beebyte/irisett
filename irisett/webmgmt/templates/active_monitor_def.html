@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block body %}
+    <table>
+    <tr>
+        <td>Name</td><td>{{ sql_monitor_def.name }}</td>
+    </tr>
+    <tr>
+        <td>Description</td><td>{{ sql_monitor_def.description }}</td>
+    </tr>
+    <tr>
+        <td>Active</td><td>{{ sql_monitor_def.active }}</td>
+    </tr>
+    <tr>
+        <td>Service check filename</td><td>{{ sql_monitor_def.cmdline_filename }}</td>
+    </tr>
+    <tr>
+        <td>Service check argument template</td><td>{{ sql_monitor_def.cmdline_args_tmpl }}</td>
+    </tr>
+    <tr>
+        <td>Monitor description template</td><td>{{ sql_monitor_def.description_tmpl }}</td>
+    </tr>
+    </table>
+{% endblock %}
