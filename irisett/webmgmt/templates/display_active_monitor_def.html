@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block body %}
+    Active monitor definition:<br>
     <table>
     <tr>
         <td>Name</td><td>{{ sql_monitor_def.name }}</td>
@@ -19,5 +20,19 @@
     <tr>
         <td>Monitor description template</td><td>{{ sql_monitor_def.description_tmpl }}</td>
     </tr>
+    </table>
+    <br>
+    Arguments:<br>
+    <table>
+    {% for arg in sql_monitor_def.args %}
+        <tr>
+            <td>{{ arg.id }}</td>
+            <td>{{ arg.name }}</td>
+            <td>{{ arg.display_name }}</td>
+            <td>{{ arg.description }}</td>
+            <td>{{ arg.required }}</td>
+            <td>{{ arg.default_value }}</td>
+        </tr>
+    {% endfor %}
     </table>
 {% endblock %}

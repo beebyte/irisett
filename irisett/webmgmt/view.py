@@ -16,6 +16,19 @@ class IndexView(web.View):
         return context
 
 
+def parse_active_monitor_def_row(row):
+    ret = {
+        'id': row[0],
+        'name': row[1],
+        'description': row[2],
+        'active': row[3],
+        'cmdline_filename': row[4],
+        'cmdline_args_tmpl': row[5],
+        'description_tmpl': row[6],
+    }
+    return ret
+
+
 class ListActiveMonitorDefsView(web.View):
     @aiohttp_jinja2.template('list_active_monitor_defs.html')
     async def get(self) -> Dict[str, Any]:
@@ -31,15 +44,7 @@ class ListActiveMonitorDefsView(web.View):
         rows = await self.request.app['dbcon'].fetch_all(q)
         ret = []
         for row in rows:
-            active_monitor_def = {
-                'id': row[0],
-                'name': row[1],
-                'description': row[2],
-                'active': row[3],
-                'cmdline_filename': row[4],
-                'cmdline_args_tmpl': row[5],
-                'description_tmpl': row[6],
-            }
+            active_monitor_def = parse_active_monitor_def_row(row)
             ret.append(active_monitor_def)
         return ret
 
@@ -61,13 +66,23 @@ class DisplayActiveMonitorDefView(web.View):
         q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
             from active_monitor_defs where id=%s'''
         row = await self.request.app['dbcon'].fetch_row(q, (monitor_def_id,))
-        ret = {
-            'id': row[0],
-            'name': row[1],
-            'description': row[2],
-            'active': row[3],
-            'cmdline_filename': row[4],
-            'cmdline_args_tmpl': row[5],
-            'description_tmpl': row[6],
-        }
+        ret = parse_active_monitor_def_row(row)
+        ret['args'] = await self._get_active_monitor_def_args(monitor_def_id)
+        return ret
+
+    async def _get_active_monitor_def_args(self, monitor_def_id):
+        q = '''select id, name, display_name, description, required, default_value
+            from active_monitor_def_args where active_monitor_def_id=%s'''
+        rows = await self.request.app['dbcon'].fetch_all(q, (monitor_def_id,))
+        ret = []
+        for row in rows:
+            arg = {
+                'id': row[0],
+                'name': row[1],
+                'display_name': row[2],
+                'description': row[3],
+                'required': row[4],
+                'default_value': row[5],
+            }
+            ret.append(arg)
         return ret
