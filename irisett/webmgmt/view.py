@@ -16,8 +16,36 @@ class IndexView(web.View):
         return context
 
 
-class ActiveMonitorDefView(web.View):
-    @aiohttp_jinja2.template('active_monitor_def.html')
+class ListActiveMonitorDefsView(web.View):
+    @aiohttp_jinja2.template('list_active_monitor_defs.html')
+    async def get(self) -> Dict[str, Any]:
+        am_manager = self.request.app['active_monitor_manager']
+        context = {
+            'monitor_defs': await self._get_active_monitor_defs(),
+        }
+        return context
+
+    async def _get_active_monitor_defs(self):
+        q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
+            from active_monitor_defs'''
+        rows = await self.request.app['dbcon'].fetch_all(q)
+        ret = []
+        for row in rows:
+            active_monitor_def = {
+                'id': row[0],
+                'name': row[1],
+                'description': row[2],
+                'active': row[3],
+                'cmdline_filename': row[4],
+                'cmdline_args_tmpl': row[5],
+                'description_tmpl': row[6],
+            }
+            ret.append(active_monitor_def)
+        return ret
+
+
+class DisplayActiveMonitorDefView(web.View):
+    @aiohttp_jinja2.template('display_active_monitor_def.html')
     async def get(self) -> Dict[str, Any]:
         monitor_def_id = int(self.request.match_info['id'])
         am_manager = self.request.app['active_monitor_manager']

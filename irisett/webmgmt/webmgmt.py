@@ -25,7 +25,8 @@ from irisett.monitor.active import ActiveMonitorManager
 def setup_routes(app: web.Application):
     r = app.router.add_route
     r('*', '/', view.IndexView)
-    r('*', '/active_monitor_def/{id}/', view.ActiveMonitorDefView)
+    r('*', '/active_monitor_def/', view.ListActiveMonitorDefsView)
+    r('*', '/active_monitor_def/{id}/', view.DisplayActiveMonitorDefView)
     static_path = '%s/static' % (os.path.dirname(os.path.realpath(__file__)))
     app.router.add_static('/static/', path=static_path, name='static')
 
