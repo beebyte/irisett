@@ -31,7 +31,7 @@ async def send_email(loop, mail_from: str, mail_to: Union[Iterable, str],
             msg['From'] = mail_from
             msg['To'] = rcpt
             await smtp.send_message(msg)
-            await smtp.quit()
+        await smtp.quit()
     except aiosmtplib.errors.SMTPException as e:
         log.msg('Error sending smtp notification: %s' % (str(e)), 'NOTIFICATIONS')
 
