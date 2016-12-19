@@ -6,7 +6,9 @@ import aiohttp_jinja2
 
 from irisett import (
     metadata,
+    stats,
 )
+
 
 class IndexView(web.View):
     @aiohttp_jinja2.template('index.html')
@@ -15,6 +17,15 @@ class IndexView(web.View):
         active_monitors = am_manager.monitors
         context = {
             'active_monitors': active_monitors.values(),
+        }
+        return context
+
+
+class StatisticsView(web.View):
+    @aiohttp_jinja2.template('statistics.html')
+    async def get(self) -> Dict[str, Any]:
+        context = {
+            'stats': stats.get_stats(),
         }
         return context
 
