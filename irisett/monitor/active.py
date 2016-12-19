@@ -240,6 +240,7 @@ class ActiveMonitorManager:
             except ValueError:
                 pass
         monitor.scheduled_job = self.loop.call_later(interval, self.run_monitor, monitor.id)  # type: ignore
+        monitor.scheduled_job_ts = time.time() + interval
 
     def add_monitor(self, monitor: 'ActiveMonitor'):
         self.monitors[monitor.id] = monitor
@@ -408,6 +409,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.alerts_enabled = alerts_enabled
         self._pending_reset = False
         self.scheduled_job = None  # type: Optional[asyncio.Handle]
+        self.scheduled_job_ts = 0
         stats.inc('num_monitors', 'ACT_MON')
 
     def __str__(self):
