@@ -457,9 +457,9 @@ class ContactView(web.View):
         else:
             q = """select id, name, email, phone, active from contacts"""
             rows = await dbcon.fetch_all(q)
-            meta_q = """select meta.object_id, meta.key, meta.value
+            meta_q = '''select meta.object_id, meta.key, meta.value
                 from object_metadata as meta, contacts
-                where meta.object_id=contacts.id"""
+                where meta.object_id=contacts.id and meta.object_type="contact"'''
             meta_rows = await dbcon.fetch_all(meta_q)
         contacts = {}
         for id, name, email, phone, active in rows:
