@@ -4,6 +4,9 @@ from typing import Any, Dict
 from aiohttp import web
 import aiohttp_jinja2
 
+from irisett import (
+    metadata,
+)
 
 class IndexView(web.View):
     @aiohttp_jinja2.template('index.html')
@@ -12,6 +15,19 @@ class IndexView(web.View):
         active_monitors = am_manager.monitors
         context = {
             'active_monitors': active_monitors.values(),
+        }
+        return context
+
+
+class DisplayActiveMonitorView(web.View):
+    @aiohttp_jinja2.template('display_active_monitor.html')
+    async def get(self) -> Dict[str, Any]:
+        monitor_id = int(self.request.match_info['id'])
+        am_manager = self.request.app['active_monitor_manager']
+        monitor = am_manager.monitors[monitor_id]
+        context = {
+            'monitor': monitor,
+            'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id)
         }
         return context
 

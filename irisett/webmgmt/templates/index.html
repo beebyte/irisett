@@ -3,6 +3,7 @@
     <table>
         {% for monitor in active_monitors %}
             <tr>
+                <td><a href="/active_monitor/{{ monitor.id }}/">{{ monitor.id }}</a></td>
                 <td>{{ monitor.get_description() }}</td>
                 <td>{{ monitor.state }}</td>
                 <td>{{ monitor.last_check }}</td>
