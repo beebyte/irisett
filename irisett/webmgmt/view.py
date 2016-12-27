@@ -13,11 +13,7 @@ from irisett import (
 class IndexView(web.View):
     @aiohttp_jinja2.template('index.html')
     async def get(self) -> Dict[str, Any]:
-        am_manager = self.request.app['active_monitor_manager']
-        active_monitors = am_manager.monitors
-        context = {
-            'active_monitors': active_monitors.values(),
-        }
+        context = {}
         return context
 
 
@@ -26,6 +22,17 @@ class StatisticsView(web.View):
     async def get(self) -> Dict[str, Any]:
         context = {
             'stats': stats.get_stats(),
+        }
+        return context
+
+
+class AlertsView(web.View):
+    @aiohttp_jinja2.template('alerts.html')
+    async def get(self) -> Dict[str, Any]:
+        am_manager = self.request.app['active_monitor_manager']
+        active_monitors = am_manager.monitors
+        context = {
+            'alerting_active_monitors': [m for m in active_monitors.values() if m.state == 'DOWN']
         }
         return context
 
