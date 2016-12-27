@@ -210,7 +210,7 @@ SQL_MONITOR_DEFS = [
             "Monitor a website.",
             True,
             "/usr/lib/nagios/plugins/check_http",
-            '-I {{hostname}}{%if vhost%} -H {{vhost}}{%endif%} -f follow{%if match%} -s "{{match}}"{%endif%}{%if ssl%} -S{%endif%}{%if url%} -u {{url}}{%endif%}',
+            '-I {{hostname}}{%if vhost%} -H {{vhost}}{%endif%} -f follow{%if match%} -s "{{match}}"{%endif%}{%if ssl%} -S --sni{%endif%}{%if url%} -u {{url}}{%endif%}',
             'HTTP monitor for {%if vhost%}{{vhost}}{%else%}{{hostname}}{%endif%}'
             )
         """,
@@ -235,7 +235,7 @@ SQL_MONITOR_DEFS = [
             "Monitor a websites SSL certificate.",
             True,
             "/usr/lib/nagios/plugins/check_http",
-            "-I {{hostname}}{%if vhost%} -H {{vhost}}{%endif%} -C {{age}},{{age}}",
+            "-I {{hostname}}{%if vhost%} -H {{vhost}}{%endif%} -C {{age}},{{age}} --sni",
             'HTTP SSL cert monitor for {%if vhost%}{{vhost}}{%else%}{{hostname}}{%endif%}'
             )
         """,
