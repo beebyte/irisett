@@ -78,6 +78,9 @@ async def error_handler_middleware_factory(app: web.Application, handler):
         except errors.PermissionDenied as e:
             errcode = 401
             errmsg = str(e) or 'permission denied'
+        except errors.MissingLogin as e:
+            errcode = 401
+            errmsg = str(e) or 'permission denied'
             headers['WWW-Authenticate'] = 'Basic realm="Restricted"'
         except errors.InvalidData as e:
             errcode = 400
