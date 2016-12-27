@@ -30,6 +30,17 @@ class StatisticsView(web.View):
         return context
 
 
+class ListActiveMonitorsView(web.View):
+    @aiohttp_jinja2.template('list_active_monitors.html')
+    async def get(self) -> Dict[str, Any]:
+        am_manager = self.request.app['active_monitor_manager']
+        active_monitors = am_manager.monitors
+        context = {
+            'active_monitors': active_monitors.values(),
+        }
+        return context
+
+
 class DisplayActiveMonitorView(web.View):
     @aiohttp_jinja2.template('display_active_monitor.html')
     async def get(self) -> Dict[str, Any]:

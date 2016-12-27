@@ -26,6 +26,7 @@ def setup_routes(app: web.Application):
     r = app.router.add_route
     r('*', '/', view.IndexView)
     r('*', '/statistics/', view.StatisticsView)
+    r('*', '/active_monitor/', view.ListActiveMonitorsView)
     r('*', '/active_monitor/{id}/', view.DisplayActiveMonitorView)
     r('*', '/active_monitor_def/', view.ListActiveMonitorDefsView)
     r('*', '/active_monitor_def/{id}/', view.DisplayActiveMonitorDefView)
