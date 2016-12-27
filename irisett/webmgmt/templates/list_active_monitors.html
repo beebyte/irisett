@@ -7,7 +7,7 @@
                 <td>{{ monitor.get_description() }}</td>
                 <td>{{ monitor.state }}</td>
                 <td>{{ monitor.last_check }}</td>
-                <td><a href="active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
+                <td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
                 <td>{{ monitor.msg }}</td>
             </tr>
         {% endfor %}
