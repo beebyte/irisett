@@ -43,6 +43,7 @@
         </tr>
     {% endfor %}
     </table>
+    {% if metadata %}
     <br>
     Metadata:<br>
     <table>
@@ -53,4 +54,16 @@
         </tr>
     {% endfor %}
     </table>
+    {% endif %}
+    {% if contacts %}
+    <br>
+    Contacts:<br>
+    <table>
+    {% for contact in contacts %}
+        <tr>
+            <td><a href="/contact/{{ contact.id }}/">{{ contact.name }}</a></td>
+        </tr>
+    {% endfor %}
+    </table>
+    {% endif %}
 {% endblock %}

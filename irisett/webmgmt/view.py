@@ -59,7 +59,8 @@ class DisplayActiveMonitorView(web.View):
         monitor = am_manager.monitors[monitor_id]
         context = {
             'monitor': monitor,
-            'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id)
+            'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
+            'contacts': await contact.get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
         }
         return context
 
