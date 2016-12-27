@@ -182,3 +182,42 @@ async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) 
             'active': active
         })
     return contacts
+
+
+async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
+    """Get all contacts
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select id, name, email, phone, active from contacts"""
+    rows = await dbcon.fetch_all(q)
+    contacts = []
+    for id, name, email, phone, active in rows:
+        contacts.append({
+            'id': id,
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'active': active
+        })
+    return contacts
+
+async def get_contact(dbcon: DBConnection, id: int) -> Dict[str, str]:
+    """Get all contacts
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select id, name, email, phone, active from contacts where id=%s"""
+    q_args = (id,)
+    row = await dbcon.fetch_row(q, q_args)
+    contact = None
+    if row:
+        id, name, email, phone, active = row
+        contact = {
+            'id': id,
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'active': active
+        }
+    return contact

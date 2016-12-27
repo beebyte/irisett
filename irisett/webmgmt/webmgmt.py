@@ -31,6 +31,8 @@ def setup_routes(app: web.Application):
     r('*', '/active_monitor/{id}/', view.DisplayActiveMonitorView)
     r('*', '/active_monitor_def/', view.ListActiveMonitorDefsView)
     r('*', '/active_monitor_def/{id}/', view.DisplayActiveMonitorDefView)
+    r('*', '/contact/', view.ListContactsView)
+    r('*', '/contact/{id}/', view.DisplayContactView)
     static_path = '%s/static' % (os.path.dirname(os.path.realpath(__file__)))
     app.router.add_static('/static/', path=static_path, name='static')
 

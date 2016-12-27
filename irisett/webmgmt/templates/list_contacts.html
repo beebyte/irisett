@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block body %}
+    <table>
+        {% for contact in contacts %}
+            <tr>
+                <td><a href="/contact/{{ contact.id }}/">{{ contact.id }}</a></td>
+                <td>{{ contact.name }}</td>
+                <td>{{ contact.email }}</td>
+                <td>{{ contact.phone }}</td>
+                <td>{{ contact.active }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

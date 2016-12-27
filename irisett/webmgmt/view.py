@@ -7,7 +7,10 @@ import aiohttp_jinja2
 from irisett import (
     metadata,
     stats,
+    contact,
 )
+
+from irisett.webmgmt import errors
 
 
 class IndexView(web.View):
@@ -131,3 +134,24 @@ class DisplayActiveMonitorDefView(web.View):
             }
             ret.append(arg)
         return ret
+
+
+class ListContactsView(web.View):
+    @aiohttp_jinja2.template('list_contacts.html')
+    async def get(self) -> Dict[str, Any]:
+        context = {
+            'contacts': await contact.get_all_contacts(self.request.app['dbcon']),
+        }
+        return context
+
+
+class DisplayContactView(web.View):
+    @aiohttp_jinja2.template('display_contact.html')
+    async def get(self) -> Dict[str, Any]:
+        c = await contact.get_contact(self.request.app['dbcon'], int(self.request.match_info['id']))
+        if not c:
+            raise errors.NotFound()
+        context = {
+            'contact': c,
+        }
+        return context
