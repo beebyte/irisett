@@ -17,6 +17,7 @@ from irisett import (
 from irisett.webmgmt import (
     view,
     middleware,
+    jinja_filters,
 )
 
 from irisett.sql import DBConnection
@@ -56,7 +57,12 @@ def initialize(loop: asyncio.AbstractEventLoop, port: int, username: str, passwo
     app['active_monitor_manager'] = active_monitor_manager
     setup_routes(app)
     aiohttp_jinja2.setup(
-        app, loader=jinja2.PackageLoader('irisett.webmgmt', 'templates'))
+        app,
+        loader=jinja2.PackageLoader('irisett.webmgmt', 'templates'),
+        filters={
+            'timestamp': jinja_filters.timestamp
+        },
+    )
 
     listener = loop.create_server(app.make_handler(), '0.0.0.0', port)
     loop.create_task(listener)  # type: ignore

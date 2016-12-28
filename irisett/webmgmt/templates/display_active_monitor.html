@@ -12,7 +12,7 @@
         </tr>
         <tr>
             <td>Last check</td>
-            <td>{{ monitor.last_check }}</td>
+            <td>{{ monitor.last_check|timestamp }}</td>
         </tr>
         <tr>
             <td>Monitor definition</td>
@@ -40,7 +40,7 @@
         </tr>
         <tr>
             <td>Next scheduled job</td>
-            <td>{{ monitor.scheduled_job_ts }}</td>
+            <td>{{ monitor.scheduled_job_ts|timestamp }}</td>
         </tr>
         <tr>
             <td>Display events</td>
