@@ -22,6 +22,7 @@ from irisett import (
     errors,
     contact,
     stats,
+    event,
 )
 from irisett.metadata import get_metadata
 from irisett.notify.manager import NotificationManager
@@ -241,10 +242,46 @@ class ActiveMonitorManager:
                 pass
         monitor.scheduled_job = self.loop.call_later(interval, self.run_monitor, monitor.id)  # type: ignore
         monitor.scheduled_job_ts = time.time() + interval
+        event.running('SCHEDULE_ACTIVE_MONITOR', monitor=monitor, interval=interval)
 
     def add_monitor(self, monitor: 'ActiveMonitor'):
         self.monitors[monitor.id] = monitor
         self.schedule_monitor(monitor, 0)
+
+
+class MonitorTemplateCache:
+    """A simple cache for monitor values.
+
+    We cache values that have been expanded from jinja templates. We don't
+    want to keep re-expanding these all the time, but they need to be
+    updated for example when the template is changed in the monitor def.
+
+    One template cache instance is stored for each monitor def, values are
+    flushed when needed for example when a monitor def or monitor is
+    updated.
+    """
+    def __init__(self):
+        self.cache = {}  # Dict[int, Any]
+
+    def get(self, monitor: 'ActiveMonitor', name: str):
+        ret = None
+        monitor_values = self.cache.get(monitor.id)
+        if monitor_values:
+            ret = monitor_values.get(name)
+        return ret
+
+    def set(self, monitor: 'ActiveMonitor', name: str, value: Any) -> Any:
+        if monitor.id not in self.cache:
+            self.cache[monitor.id] = {}
+        self.cache[monitor.id][name] = value
+        return value
+
+    def flush_all(self):
+        self.cache = {}
+
+    def flush_monitor(self, monitor: 'ActiveMonitor'):
+        if monitor.id in self.cache:
+            del self.cache[monitor.id]
 
 
 class ActiveMonitorDef(log.LoggingMixin):
@@ -260,6 +297,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         self.manager = manager
         self.jinja_cmdline_args = jinja2.Template(cmdline_args_tmpl)
         self.jinja_description_tmpl = jinja2.Template(description_tmpl)
+        self.tmpl_cache = MonitorTemplateCache()
 
     def __str__(self):
         return '<ActiveMonitorDef(%s/%s)>' % (self.id, self.cmdline_filename)
@@ -284,7 +322,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         ret = shlex.split(expanded)  # Supports "" splitting etc.
         return ret
 
-    def get_monitor_description(self, monitor_args: Dict[str, str]) -> str:
+    def expand_monitor_description(self, monitor_args: Dict[str, str]) -> str:
         """Return a monitor description based on this monitor def.
 
         This uses the monitor def description_tmpl to create a useful
@@ -310,10 +348,10 @@ class ActiveMonitorDef(log.LoggingMixin):
         return True
 
     async def delete(self):
-        for monitor in self.manager.monitors.values():
-            if monitor.monitor_def.id == self.id:
-                raise errors.IrisettError('can\'t remove active monitor def that is in use')
+        for _ in self.iter_monitors():
+            raise errors.IrisettError('can\'t remove active monitor def that is in use')
         del self.manager.monitor_defs[self.id]
+        self.tmpl_cache.flush_all()
         await remove_monitor_def_from_db(self.manager.dbcon, self.id)
 
     async def update(self, update_params: Dict[str, Any]):
@@ -334,16 +372,17 @@ class ActiveMonitorDef(log.LoggingMixin):
         if 'cmdline_args_tmpl' in update_params:
             self.cmdline_args_tmpl = update_params['cmdline_args_tmpl']
             self.jinja_cmdline_args = jinja2.Template(self.cmdline_args_tmpl)
-            self.update_monitor_expanded_args()
         if 'description_tmpl' in update_params:
             self.description_tmpl = update_params['description_tmpl']
             self.jinja_description_tmpl = jinja2.Template(self.description_tmpl)
+        self.tmpl_cache.flush_all()
         await self.manager.dbcon.transact(_run)
 
-    def update_monitor_expanded_args(self):
+    def iter_monitors(self):
+        """List all monitors that use this monitor def."""
         for monitor in self.manager.monitors.values():
             if monitor.monitor_def.id == self.id:
-                monitor.expanded_args = self.expand_monitor_args(monitor.args)
+                yield monitor
 
     async def set_arg(self, name: str, display_name: str, description: str, required: bool, default_value: str):
         arg = self.get_arg_with_name(name)
@@ -363,15 +402,15 @@ class ActiveMonitorDef(log.LoggingMixin):
                                                         self.id, name, display_name,
                                                         description, required, default_value)
             self.arg_spec.append(arg)
-        self.update_monitor_expanded_args()
+        self.tmpl_cache.flush_all()
         return arg
 
     async def delete_arg(self, name):
         arg = self.get_arg_with_name(name)
         if arg:
             self.arg_spec.remove(arg)
+            self.tmpl_cache.flush_all()
             await delete_monitor_def_arg_from_db(self.manager.dbcon, arg['id'])
-            self.update_monitor_expanded_args()
 
     async def get_notify_data(self):
         q = """select name, description from active_monitor_defs where id=%s"""
@@ -392,7 +431,6 @@ class ActiveMonitor(log.LoggingMixin):
         self.id = id
         self.args = args
         self.monitor_def = monitor_def
-        self.expanded_args = monitor_def.expand_monitor_args(args)
         self.state = state
         self.manager = manager
         self.last_check_state = None  # type: Optional[str]
@@ -410,10 +448,33 @@ class ActiveMonitor(log.LoggingMixin):
         self._pending_reset = False
         self.scheduled_job = None  # type: Optional[asyncio.Handle]
         self.scheduled_job_ts = 0
+        event.running('CREATE_ACTIVE_MONITOR', monitor=self)
         stats.inc('num_monitors', 'ACT_MON')
 
     def __str__(self):
         return '<ActiveMonitor(%s/%s/%s)>' % (self.id, self.state, self.last_check_state)
+
+    def get_description(self) -> str:
+        """Get a description for this monitor.
+
+        The description is created from a template in the monitor defintion.
+        """
+        ret = self.monitor_def.tmpl_cache.get(self, 'description')
+        if not ret:
+            ret = self.monitor_def.tmpl_cache.set(
+                self, 'description', self.monitor_def.expand_monitor_description(self.args))
+        return ret
+
+    def get_expanded_args(self) -> List[str]:
+        """Get the expanded service check arguments for this monitor.
+
+        The arguments are created from a template in the monitor definition
+        """
+        ret = self.monitor_def.tmpl_cache.get(self, 'args')
+        if not ret:
+            ret = self.monitor_def.tmpl_cache.set(
+                self, 'args', self.monitor_def.expand_monitor_args(self.args))
+        return ret
 
     async def run(self):
         if self.deleted or self.monitoring:
@@ -434,9 +495,11 @@ class ActiveMonitor(log.LoggingMixin):
             self.log_debug('skipping monitor check, disabled')
             self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
             return
-        self.log_debug('monitoring: %s %s' % (self.monitor_def.cmdline_filename, self.expanded_args))
+        expanded_args = self.get_expanded_args()
+        self.log_debug('monitoring: %s %s' % (self.monitor_def.cmdline_filename, expanded_args))
+        event.running('RUN_ACTIVE_MONITOR', monitor=self)
         try:
-            msg = await nagios.run_plugin(self.monitor_def.cmdline_filename, self.expanded_args, 30)
+            msg = await nagios.run_plugin(self.monitor_def.cmdline_filename, expanded_args, 30)
             msg, perf = msg
             check_state = 'UP'
         except nagios.MonitorFailedError as e:
@@ -458,6 +521,7 @@ class ActiveMonitor(log.LoggingMixin):
             await self._purge()
 
     async def handle_check_result(self, check_state: str, msg: str):
+        event.running('ACTIVE_MONITOR_CHECK_RESULT', monitor=self, check_state=check_state, msg=msg)
         if check_state == 'UP' and self.state == 'UP':
             # Introduce a slight variation in monitoring intervals when
             # everything is going ok for a monitor. This will help spread
@@ -499,6 +563,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.msg = ''
 
     async def state_change(self, new_state: str, msg: str):
+        event.running('ACTIVE_MONITOR_STATE_CHANGE', monitor=self, new_state=new_state)
         prev_state = self.state
         prev_state_ts = self.state_ts
         self.state = new_state
@@ -537,9 +602,6 @@ class ActiveMonitor(log.LoggingMixin):
         # while and we don't want to pause the monitoring to wait for it.
         self.manager.loop.create_task(
             self.manager.notification_manager.send_notification(contacts, tmpl_data))  # type: ignore
-
-    def get_description(self) -> str:
-        return self.monitor_def.get_monitor_description(self.args)
 
     def update_consecutive_checks(self, state):
         """Update the counter for consecutive checks with the same result."""
@@ -602,6 +664,7 @@ class ActiveMonitor(log.LoggingMixin):
         if self.deleted:
             return
         self.log_msg('deleting monitor')
+        event.running('DELETE_ACTIVE_MONITOR', monitor=self)
         self.deleted = True
         if self.id in self.manager.monitors:
             del self.manager.monitors[self.id]
@@ -616,6 +679,7 @@ class ActiveMonitor(log.LoggingMixin):
         """Remove a monitor from the database."""
         self.log_msg('purging deleted monitor')
         stats.dec('num_monitors', 'ACT_MON')
+        self.monitor_def.tmpl_cache.flush_monitor(self)
         await remove_monitor_from_db(self.manager.dbcon, self.id)
 
     async def update_args(self, args: Dict[str, str]):
@@ -631,7 +695,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.log_msg('updating monitor arguments')
         self.monitor_def.validate_monitor_args(args)
         self.args = args
-        self.expanded_args = self.monitor_def.expand_monitor_args(args)
+        self.monitor_def.tmpl_cache.flush_monitor(self)
         await self.manager.dbcon.transact(_run)
 
     async def set_checks_enabled_status(self, checks_enabled: bool):
