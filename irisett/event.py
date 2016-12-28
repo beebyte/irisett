@@ -6,9 +6,14 @@ monitors call event.running(...) when they start/stop monitoring etc.
 Other parts of irisett can then listen for events that are happening.
 For example, the webmgmt ui can send events that are occuring over a websocket
 to clients that want to watch events as they occur.
+
+Performance concerns:
+    The event tracing infrastructure is probably not great from a performance
+    standpoint. However if there are no listeners connected the overhead
+    is marginal.
 """
 
-from typing import Callable, Dict, Optional, List, Set, Union
+from typing import Callable, Dict, Optional, List, Set, Union, Any
 import time
 import asyncio
 
@@ -42,13 +47,13 @@ class EventListener:
         self.active_monitor_filter = self._parse_filter_list(self._parse_active_monitor_filter(filter))
 
     @staticmethod
-    def _parse_active_monitor_filter(filter: Optional[List]):
+    def _parse_active_monitor_filter(filter: Optional[List]) -> Any:
         if filter:
             filter = [int(n) for n in filter]
         return filter
 
     @staticmethod
-    def _parse_filter_list(filter: Optional[List]) -> set:
+    def _parse_filter_list(filter: Optional[List]) -> Any:
         """Parse a filter argument.
 
         If a list of filter arguments are passed in convert it to a set
@@ -87,7 +92,7 @@ class EventTracer:
 
     def listen(self, callback: Callable, *,
                event_filter: Optional[List[str]] = None,
-               active_monitor_filter: Optional[List[int]] = None) -> EventListener:
+               active_monitor_filter: Optional[List[Union[str, int]]] = None) -> EventListener:
         """Set a callback function that will receive events.
 
         Two filters can be used when selecting which events the callback will
