@@ -81,6 +81,8 @@ class WSEventProxy:
             msg['monitor_id'] = data['monitor'].id
             msg['monitor_description'] = data['monitor'].get_description()
             msg['check_state'] = data['check_state']
+            msg['monitor_state'] = data['monitor'].state
+            msg['consecutive_checks'] = data['monitor'].consecutive_checks
             msg['msg'] = data['msg']
         elif event_name == 'ACTIVE_MONITOR_STATE_CHANGE':
             msg['monitor_id'] = data['monitor'].id

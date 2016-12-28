@@ -61,7 +61,9 @@ live from the irisett server.
             } else if (msg.event == 'ACTIVE_MONITOR_CHECK_RESULT') {
                 lines = [
                     'Check state: ' + msg.check_state,
-                    'Check result: ' + msg.msg
+                    'Monitor state: ' + msg.monitor_state,
+                    'Check result: ' + msg.msg,
+                    'Consecutive results: ' + msg.consecutive_checks
                 ]
             } else if (msg.event == 'ACTIVE_MONITOR_STATE_CHANGE') {
                 lines = [

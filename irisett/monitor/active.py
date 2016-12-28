@@ -524,7 +524,6 @@ class ActiveMonitor(log.LoggingMixin):
             await self._purge()
 
     async def handle_check_result(self, check_state: str, msg: str):
-        event.running('ACTIVE_MONITOR_CHECK_RESULT', monitor=self, check_state=check_state, msg=msg)
         if check_state == 'UP' and self.state == 'UP':
             # Introduce a slight variation in monitoring intervals when
             # everything is going ok for a monitor. This will help spread
@@ -559,6 +558,7 @@ class ActiveMonitor(log.LoggingMixin):
             else:
                 self.manager.schedule_monitor(self, 120)
             stats.inc('checks_unknown', 'ACT_MON')
+        event.running('ACTIVE_MONITOR_CHECK_RESULT', monitor=self, check_state=check_state, msg=msg)
 
     async def _set_monitor_checks_disabled(self):
         self.state = 'UNKNOWN'
