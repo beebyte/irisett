@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block body %}
-    <table>
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+
         {% for monitor_def in monitor_defs %}
             <tr>
                 <td><a href="/active_monitor_def/{{ monitor_def.id }}/">{{ monitor_def.id }}</a></td>

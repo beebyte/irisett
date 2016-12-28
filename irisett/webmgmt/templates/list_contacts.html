@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 {% block body %}
-    <table>
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Active</th>
+        </tr>
         {% for contact in contacts %}
             <tr>
                 <td><a href="/contact/{{ contact.id }}/">{{ contact.id }}</a></td>

@@ -121,7 +121,6 @@ class EventsWSProxy:
             msg['monitor_id'] = data['monitor'].id
             msg['monitor_description'] = data['monitor'].get_description()
         if msg:
-            print('MMMMMMMMMM', msg)
             res = self.ws.send_json(msg)
 
 

@@ -1,69 +1,79 @@
 {% extends "base.html" %}
 {% block body %}
-    Active monitor:<br>
-    <table>
-    <tr>
-        <td>Name</td><td>{{ monitor.get_description() }}</td>
-    </tr>
-    <tr>
-        <td>State</td><td>{{ monitor.state }}</td>
-    </tr>
-    <tr>
-        <td>Last check</td><td>{{ monitor.last_check }}</td>
-    </tr>
-    <tr>
-        <td>Monitor definition</td><td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
-    </tr>
-    <tr>
-        <td>Checks enabled</td><td>{{ monitor.checks_enabled }}</td>
-    </tr>
-    <tr>
-        <td>Alerts enabled</td><td>{{ monitor.alerts_enabled }}</td>
-    </tr>
-    <tr>
-        <td>Message</td><td>{{ monitor.msg }}</td>
-    </tr>
-    <tr>
-        <td>Last check state</td><td>{{ monitor.last_check_state }}</td>
-    </tr>
-    <tr>
-        <td>Consecutive checks (same result)</td><td>{{ monitor.consecutive_checks }}</td>
-    </tr>
-    <tr>
-        <td>Next scheduled job</td><td>{{ monitor.scheduled_job_ts }}</td>
-    </tr>
+    <h1 class="table-heading">Active monitor</h1>
+    <table class="table kvp-table">
+        <tr>
+            <td>Name</td>
+            <td>{{ monitor.get_description() }}</td>
+        </tr>
+        <tr>
+            <td>State</td>
+            <td>{{ monitor.state }}</td>
+        </tr>
+        <tr>
+            <td>Last check</td>
+            <td>{{ monitor.last_check }}</td>
+        </tr>
+        <tr>
+            <td>Monitor definition</td>
+            <td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
+        </tr>
+        <tr>
+            <td>Checks enabled</td>
+            <td>{{ monitor.checks_enabled }}</td>
+        </tr>
+        <tr>
+            <td>Alerts enabled</td>
+            <td>{{ monitor.alerts_enabled }}</td>
+        </tr>
+        <tr>
+            <td>Message</td>
+            <td>{{ monitor.msg }}</td>
+        </tr>
+        <tr>
+            <td>Last check state</td>
+            <td>{{ monitor.last_check_state }}</td>
+        </tr>
+        <tr>
+            <td>Consecutive checks (same result)</td>
+            <td>{{ monitor.consecutive_checks }}</td>
+        </tr>
+        <tr>
+            <td>Next scheduled job</td>
+            <td>{{ monitor.scheduled_job_ts }}</td>
+        </tr>
     </table>
     <br>
-    Arguments:<br>
-    <table>
-    {% for key, value in monitor.args.items() %}
-        <tr>
-            <td>{{ key }}</td>
-            <td>{{ value }}</td>
-        </tr>
-    {% endfor %}
+    <h2 class="table-heading">Arguments</h2>
+    <table class="table kvp-table">
+        {% for key, value in monitor.args.items() %}
+            <tr>
+                <td>{{ key }}</td>
+                <td>{{ value }}</td>
+            </tr>
+        {% endfor %}
     </table>
     {% if metadata %}
-    <br>
-    Metadata:<br>
-    <table>
-    {% for key, value in metadata.items() %}
-        <tr>
-            <td>{{ key }}</td>
-            <td>{{ value }}</td>
-        </tr>
-    {% endfor %}
-    </table>
+        <br>
+        <h2 class="table-heading">Metadata</h2>
+        <table class="table kvp-table">
+            {% for key, value in metadata.items() %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td>{{ value }}</td>
+                </tr>
+            {% endfor %}
+        </table>
     {% endif %}
     {% if contacts %}
-    <br>
-    Contacts:<br>
-    <table>
-    {% for contact in contacts %}
-        <tr>
-            <td><a href="/contact/{{ contact.id }}/">{{ contact.name }}</a></td>
-        </tr>
-    {% endfor %}
-    </table>
+        <br>
+        <h2 class="table-heading">Contacts</h2>
+        <table class="table kvp-table">
+            {% for contact in contacts %}
+                <tr>
+                    <td><a href="/contact/{{ contact.id }}/">{{ contact.name }}</a></td>
+                </tr>
+            {% endfor %}
+        </table>
     {% endif %}
 {% endblock %}

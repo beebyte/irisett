@@ -1,15 +1,19 @@
-table.eventlog {
-    width: 100%;
+a {
+    font-size: 16px;
+    text-decoration: underline;
+    color: darkblue;
 }
-table.eventlog th {
-    background-color: lightblue;
-}
-table.eventlog tr td {
-    padding: 5px;
+
+a:hover {
+    text-decoration: underline;
 }
 
 table.eventlog tr {
     animation: fadein 1s;
+}
+
+table.eventlog tr td pre {
+    margin: 3px;
 }
 
 @keyframes fadein {
@@ -34,3 +38,57 @@ table.eventlog tr.warning {
     text-align: center;
 }
 
+.table {
+    width: 100%;
+}
+.table th {
+    padding: 5px;
+    background-color: lightblue;
+}
+.table td {
+    padding: 5px;
+}
+.table tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+.table tr:nth-child(odd) {
+    background-color: #e8e8e8;
+}
+
+.menu {
+    margin-bottom: 30px;
+    text-align: center;
+    width: 100%;
+}
+
+.menu a {
+    font-size: 18px;
+    text-decoration: none;
+    color: black;
+}
+
+.menu a:hover {
+    text-decoration: underline;
+}
+
+.kvp-table td:first-child {
+    font-weight: bold;
+}
+
+.table-heading {
+    margin-top: 20px;
+    font-weight: bold;
+    display: block;
+    padding-left: 10px;
+    margin-bottom: 10px;
+    color: #202020;
+    background-color: lightblue;
+}
+
+h1.table-heading {
+    font-size: 25px;
+}
+
+h2.table-heading {
+    font-size: 20px;
+}

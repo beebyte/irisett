@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block body %}
-    <table>
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>State</th>
+            <th>Last check</th>
+            <th>Monitor def</th>
+            <th>Message</th>
+        </tr>
+
         {% for monitor in active_monitors %}
             <tr>
                 <td><a href="/active_monitor/{{ monitor.id }}/">{{ monitor.id }}</a></td>
