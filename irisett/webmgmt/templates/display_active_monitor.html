@@ -42,6 +42,10 @@
             <td>Next scheduled job</td>
             <td>{{ monitor.scheduled_job_ts }}</td>
         </tr>
+        <tr>
+            <td>Display events</td>
+            <td><a href="/events/?active_monitor_filter={{ monitor.id }}">Event log</a></td>
+        </tr>
     </table>
     <br>
     <h2 class="table-heading">Arguments</h2>

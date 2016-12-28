@@ -20,11 +20,12 @@ class WSEventProxy:
         self.ws = web.WebSocketResponse()
         self.running = False
         self.client_started = False
+        self.listener = None  # type: event.EventListener
 
     async def run(self):
         await self.ws.prepare(self.request)
         self.running = True
-        listener = event.listen(self._handle_events)
+        self.listener = event.listen(self._handle_events)
         try:
             await asyncio.gather(
                 self._ws_read(),
@@ -32,7 +33,8 @@ class WSEventProxy:
         except (asyncio.CancelledError, asyncio.TimeoutError, aiohttp.ClientDisconnectedError):
             pass
         finally:
-            event.stop_listening(listener)
+            event.stop_listening(self.listener)
+            self.listener = False
             if not self.ws.closed:
                 self.ws.close()
 
@@ -45,6 +47,10 @@ class WSEventProxy:
                     self.client_started = True
                 elif data['cmd'] == 'stop':
                     self.client_started = False
+                elif data['cmd'] == 'event_filter':
+                    self.listener.set_event_filter(data['filter'])
+                elif data['cmd'] == 'active_monitor_filter':
+                    self.listener.set_active_monitor_filter(data['filter'])
             elif msg.type in [aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR]:
                 break
             else:

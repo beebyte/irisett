@@ -1,3 +1,8 @@
+{# Event viewer over websockets.
+
+This html/js will connected to a websocket server and view event logs
+live from the irisett server.
+#}
 {% extends "base.html" %}
 {% block body %}
     <button id="start-stop">Stop listening</button>
@@ -100,6 +105,7 @@
         var eventSocket = new WebSocket("ws://" + window.location.host + "/events/websocket/");
         var recieving = true;
         var start_btn = document.getElementById("start-stop");
+        var url_params = new URLSearchParams(window.location.search);
 
         start_btn.onclick = function () {
             var msg;
@@ -130,6 +136,20 @@
 
         eventSocket.onopen = function () {
             add_output_row("Connected, listening for events", "", "",  "");
+            var event_filter = url_params.get("event_filter")
+            if (event_filter != null) {
+                send_msg({
+                    cmd: 'event_filter',
+                    filter: event_filter.split(",")
+                })
+            }
+            var active_monitor_filter = url_params.get("active_monitor_filter")
+            if (active_monitor_filter != null) {
+                send_msg({
+                    cmd: 'active_monitor_filter',
+                    filter: active_monitor_filter.split(",")
+                })
+            }
             send_msg({cmd: 'start'})
         };
 

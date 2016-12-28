@@ -454,6 +454,9 @@ class ActiveMonitor(log.LoggingMixin):
     def __str__(self):
         return '<ActiveMonitor(%s/%s/%s)>' % (self.id, self.state, self.last_check_state)
 
+    def monitor_type(self):
+        return 'active'
+
     def get_description(self) -> str:
         """Get a description for this monitor.
 
