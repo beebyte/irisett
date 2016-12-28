@@ -8,6 +8,7 @@ charset.add_charset('utf-8', charset.SHORTEST, charset.QP)  # type: ignore
 # noinspection PyPep8
 from email.mime.text import MIMEText
 
+# noinspection PyPep8
 from irisett import (
     log,
 )

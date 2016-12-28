@@ -9,7 +9,6 @@ from irisett import (
     metadata,
     stats,
     contact,
-    event,
     log,
 )
 
