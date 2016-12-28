@@ -22,7 +22,7 @@ from irisett.webmgmt import (
 class IndexView(web.View):
     @aiohttp_jinja2.template('index.html')
     async def get(self) -> Dict[str, Any]:
-        context = {}
+        context = {}  # type: Dict[str, Any]
         return context
 
 
@@ -52,9 +52,10 @@ class EventsView(web.View):
     This just supplies the HTML and javascript to connect the the websocket
     handler.
     """
+
     @aiohttp_jinja2.template('events.html')
     async def get(self) -> Dict[str, Any]:
-        context = {}
+        context = {}  # type: Dict[str, Any]
         return context
 
 

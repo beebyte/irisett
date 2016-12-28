@@ -152,6 +152,3 @@ texinfo_documents = [
      author, 'irisett', 'One line description of project.',
      'Miscellaneous'),
 ]
-
-
-

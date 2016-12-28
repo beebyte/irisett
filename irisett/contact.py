@@ -9,7 +9,7 @@ Contacts are only stored in the database and not in memory, they are loaded
 from the database each time an alert is sent.
 """
 
-from typing import Dict, Set, Iterable, Optional
+from typing import Dict, Set, Iterable, Optional, Any
 from irisett import errors
 from irisett.sql import DBConnection
 
@@ -147,6 +147,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
     Delete existing contacts for an active monitor and set the given new
     contacts.
     """
+
     async def _run(cur):
         q = """delete from active_monitor_contacts where active_monitor_id=%s"""
         await cur.execute(q, (monitor_id,))
@@ -154,6 +155,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
             q = """insert into active_monitor_contacts (active_monitor_id, contact_id) values (%s, %s)"""
             q_args = (monitor_id, contact_id)
             await cur.execute(q, q_args)
+
     _q = """select id from active_monitors where id=%s"""
     if await dbcon.count_rows(_q, (monitor_id,)) != 1:
         raise errors.InvalidArguments('monitor does not exist')
@@ -202,8 +204,9 @@ async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
         })
     return contacts
 
-async def get_contact(dbcon: DBConnection, id: int) -> Dict[str, str]:
-    """Get all contacts
+
+async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
+    """Get a single contact if it exists.
 
     Return a list of dicts, one dict describing each contacts information.
     """

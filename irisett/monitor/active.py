@@ -447,7 +447,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.alerts_enabled = alerts_enabled
         self._pending_reset = False
         self.scheduled_job = None  # type: Optional[asyncio.Handle]
-        self.scheduled_job_ts = 0
+        self.scheduled_job_ts = 0.0
         event.running('CREATE_ACTIVE_MONITOR', monitor=self)
         stats.inc('num_monitors', 'ACT_MON')
 
@@ -600,7 +600,7 @@ class ActiveMonitor(log.LoggingMixin):
         tmpl_data['msg'] = self.msg
         # Don't wait for notifications to be sent, it may or may not take a
         # while and we don't want to pause the monitoring to wait for it.
-        self.manager.loop.create_task(
+        self.manager.loop.create_task(  # type: ignore
             self.manager.notification_manager.send_notification(contacts, tmpl_data))  # type: ignore
 
     def update_consecutive_checks(self, state):

@@ -17,40 +17,49 @@ table.eventlog tr td pre {
 }
 
 @keyframes fadein {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
 
 table.eventlog tr:nth-child(even) {
     background-color: #f8f8f8;
 }
+
 table.eventlog tr:nth-child(odd) {
     background-color: #e8e8e8;
 }
+
+/*noinspection CssUnusedSymbol*/
 table.eventlog tr.success {
     background-color: lightgreen;
 }
+
+/*noinspection CssUnusedSymbol*/
 table.eventlog tr.warning {
     background-color: lightpink;
-}
-
-.center {
-    text-align: center;
 }
 
 .table {
     width: 100%;
 }
+
 .table th {
     padding: 5px;
     background-color: lightblue;
 }
+
 .table td {
     padding: 5px;
 }
+
 .table tr:nth-child(even) {
     background-color: #f8f8f8;
 }
+
 .table tr:nth-child(odd) {
     background-color: #e8e8e8;
 }

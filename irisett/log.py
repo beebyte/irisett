@@ -3,7 +3,7 @@
 Supports logging to stdout, syslog and file.
 """
 
-from typing import Optional
+from typing import Optional, Any, cast
 
 import os
 import os.path
@@ -31,9 +31,8 @@ def configure_logging(logtype: str, logfilename: Optional[str]=None, debug_loggi
     logger = logging.getLogger('irisett')
     logger.setLevel(level)
 
-    handler = None
     if logtype == 'stdout':
-        handler = logging.StreamHandler()
+        handler = logging.StreamHandler()  # type: Any
         handler.setLevel(level)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     elif logtype == 'syslog':
@@ -41,6 +40,7 @@ def configure_logging(logtype: str, logfilename: Optional[str]=None, debug_loggi
         handler.setLevel(level)
         formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
     else:  # == file
+        logfilename = cast(str, logfilename)
         logpath = os.path.split(logfilename)[0]
         if not os.path.exists(logpath):
             os.makedirs(logpath)
