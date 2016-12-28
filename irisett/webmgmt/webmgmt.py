@@ -27,6 +27,8 @@ def setup_routes(app: web.Application):
     r('*', '/', view.IndexView)
     r('*', '/statistics/', view.StatisticsView)
     r('*', '/alerts/', view.AlertsView)
+    r('*', '/events/', view.EventsView)
+    r('GET', '/events/websocket/', view.events_websocket_handler)
     r('*', '/active_monitor/', view.ListActiveMonitorsView)
     r('*', '/active_monitor/{id}/', view.DisplayActiveMonitorView)
     r('*', '/active_monitor_def/', view.ListActiveMonitorDefsView)

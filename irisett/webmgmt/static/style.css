@@ -1,0 +1,36 @@
+table.eventlog {
+    width: 100%;
+}
+table.eventlog th {
+    background-color: lightblue;
+}
+table.eventlog tr td {
+    padding: 5px;
+}
+
+table.eventlog tr {
+    animation: fadein 1s;
+}
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+table.eventlog tr:nth-child(even) {
+    background-color: #f8f8f8;
+}
+table.eventlog tr:nth-child(odd) {
+    background-color: #e8e8e8;
+}
+table.eventlog tr.success {
+    background-color: lightgreen;
+}
+table.eventlog tr.warning {
+    background-color: lightpink;
+}
+
+.center {
+    text-align: center;
+}
+

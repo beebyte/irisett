@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block body %}
+    <button id="start-stop">Stop listening</button>
+    <hr>
+    <table class="eventlog" id="output">
+        <tr>
+            <th>Event</th>
+            <th>Time</th>
+            <th>Objects</th>
+            <th>Data</th>
+        </tr>
+    </table>
+{% endblock %}
+{% block script %}
+    <script>
+        function send_msg(msg) {
+            if (eventSocket.readyState == 1) {
+                eventSocket.send(JSON.stringify(msg))
+            }
+        }
+
+        function parse_event_name(name) {
+            return name.replace(/_/g, ' ').toLowerCase();
+        }
+
+        function parse_event_timestamp(timestamp) {
+            var date = new Date(timestamp * 1000);
+            var hours = date.getHours();
+            var minutes = "0" + date.getMinutes();
+            var seconds = "0" + date.getSeconds();
+            return hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        }
+
+        function parse_event_objects(msg) {
+            var lines = [];
+            if (["CREATE_ACTIVE_MONITOR", "RUN_ACTIVE_MONITOR", "DELETE_ACTIVE_MONITOR",
+                    "SCHEDULE_ACTIVE_MONITOR", "ACTIVE_MONITOR_CHECK_RESULT",
+                    "ACTIVE_MONITOR_STATE_CHANGE"].indexOf(msg.event) != -1) {
+                lines = [
+                    "<a href=/active_monitor/" + msg.monitor_id + "/>" + msg.monitor_description + "</a>"
+                ]
+            }
+            var ret = '';
+            if (lines.length != 0) {
+                ret = lines.join("<br>")
+            }
+            return ret
+        }
+
+        function parse_event_data(msg) {
+            var lines = [];
+            if (msg.event == 'SCHEDULE_ACTIVE_MONITOR') {
+                lines = [
+                    'Interval: ' + msg.interval + 's'
+                ]
+            } else if (msg.event == 'ACTIVE_MONITOR_CHECK_RESULT') {
+                lines = [
+                    'Check state: ' + msg.check_state,
+                    'Check result: ' + msg.msg
+                ]
+            } else if (msg.event == 'ACTIVE_MONITOR_STATE_CHANGE') {
+                lines = [
+                    'New state: ' + msg.new_state
+                ]
+            }
+            var ret = '';
+            if (lines.length != 0) {
+                ret = lines.join("\n")
+            }
+            return ret
+        }
+
+        function parse_event_status(msg) {
+            var status = undefined;
+            if (msg.event == "ACTIVE_MONITOR_CHECK_RESULT") {
+                if (msg.check_state == 'UP') {
+                    status = "success"
+                } else if (msg.check_state == "DOWN") {
+                    status = "warning"
+                }
+            }
+            return status
+        }
+
+
+        var output = document.getElementById("output");
+
+        function add_output_row(event, timestamp, objects, data, row_class) {
+            var row = output.insertRow(1);
+            row.insertCell(0).innerHTML = event;
+            row.insertCell(1).innerHTML = timestamp;
+            row.insertCell(2).innerHTML = objects;
+            row.insertCell(3).innerHTML = "<pre>" + data + "</pre>";
+            if (row_class) {
+                row.className += row_class
+            }
+        }
+
+        add_output_row("Connecting to server", "", "", "");
+        var eventSocket = new WebSocket("ws://" + window.location.host + "/events/websocket/");
+        var recieving = true;
+        var start_btn = document.getElementById("start-stop");
+
+        start_btn.onclick = function () {
+            var msg;
+            if (recieving) {
+                msg = {cmd: "stop"};
+                recieving = false;
+                start_btn.textContent = "Start listening";
+                add_output_row("Event listener stopped", "", "", "");
+            } else {
+                msg = {cmd: "start"};
+                recieving = true;
+                start_btn.textContent = "Stop listening";
+                add_output_row("Event listener started", "", "", "");
+            }
+            send_msg(msg);
+        };
+
+        eventSocket.onmessage = function (event) {
+            var msg = JSON.parse(event.data);
+            add_output_row(
+                parse_event_name(msg.event),
+                parse_event_timestamp(msg.timestamp),
+                parse_event_objects(msg),
+                parse_event_data(msg),
+                parse_event_status(msg)
+            )
+        };
+
+        eventSocket.onopen = function () {
+            add_output_row("Connected, listening for events", "", "",  "");
+            send_msg({cmd: 'start'})
+        };
+
+        eventSocket.onclose = function() {
+            add_output_row("Connection to server closed, reload page to restart", "", "", "");
+        };
+
+        eventSocket.onerror = function() {
+            add_output_row("Connection to server closed, reload page to restart", "", "", "");
+        }
+    </script>
+{% endblock %}
