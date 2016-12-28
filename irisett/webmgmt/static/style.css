@@ -8,21 +8,8 @@ a:hover {
     text-decoration: underline;
 }
 
-table.eventlog tr {
-    animation: fadein 1s;
-}
-
 table.eventlog tr td pre {
     margin: 3px;
-}
-
-@keyframes fadein {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
 }
 
 table.eventlog tr:nth-child(even) {
