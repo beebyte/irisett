@@ -29,6 +29,7 @@ packages = [
 install_requires = [
     'aiodns',
     'aiohttp',
+    'aiohttp-jinja2',
     'aiomysql',
     'aiosmtplib',
     'Jinja2',

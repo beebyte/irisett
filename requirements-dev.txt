@@ -1,5 +1,6 @@
 aiodns==1.1.1
 aiohttp==1.1.6
+aiohttp-jinja2==0.13.0
 aiomysql==0.0.9
 aiosmtplib==0.1.7
 async-timeout==1.1.0

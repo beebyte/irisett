@@ -9,7 +9,7 @@ Contacts are only stored in the database and not in memory, they are loaded
 from the database each time an alert is sent.
 """
 
-from typing import Dict, Set, Iterable, Optional
+from typing import Dict, Set, Iterable, Optional, Any
 from irisett import errors
 from irisett.sql import DBConnection
 
@@ -147,6 +147,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
     Delete existing contacts for an active monitor and set the given new
     contacts.
     """
+
     async def _run(cur):
         q = """delete from active_monitor_contacts where active_monitor_id=%s"""
         await cur.execute(q, (monitor_id,))
@@ -154,6 +155,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
             q = """insert into active_monitor_contacts (active_monitor_id, contact_id) values (%s, %s)"""
             q_args = (monitor_id, contact_id)
             await cur.execute(q, q_args)
+
     _q = """select id from active_monitors where id=%s"""
     if await dbcon.count_rows(_q, (monitor_id,)) != 1:
         raise errors.InvalidArguments('monitor does not exist')
@@ -182,3 +184,43 @@ async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) 
             'active': active
         })
     return contacts
+
+
+async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
+    """Get all contacts
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select id, name, email, phone, active from contacts"""
+    rows = await dbcon.fetch_all(q)
+    contacts = []
+    for id, name, email, phone, active in rows:
+        contacts.append({
+            'id': id,
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'active': active
+        })
+    return contacts
+
+
+async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
+    """Get a single contact if it exists.
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select id, name, email, phone, active from contacts where id=%s"""
+    q_args = (id,)
+    row = await dbcon.fetch_row(q, q_args)
+    contact = None
+    if row:
+        id, name, email, phone, active = row
+        contact = {
+            'id': id,
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'active': active
+        }
+    return contact

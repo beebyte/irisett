@@ -49,6 +49,16 @@ async def mainloop(loop: asyncio.AbstractEventLoop, config: configparser.ConfigP
         dbcon,
         active_monitor_manager,
     )
+    if config.has_section('WEBMGMT'):
+        from irisett.webmgmt import webmgmt
+        webmgmt.initialize(
+            loop,
+            int(config.get('WEBMGMT', 'port', fallback='11000')),
+            config.get('WEBMGMT', 'username'),
+            config.get('WEBMGMT', 'password'),
+            dbcon,
+            active_monitor_manager,
+        )
     active_monitor_manager.start()
     stats.set('global_startup', time.time())
     log.msg('Irisett startup complete')

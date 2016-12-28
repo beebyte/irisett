@@ -100,7 +100,7 @@ class ActiveMonitorView(web.View):
             'alerts_enabled': monitor.alerts_enabled,
             'monitoring': monitor.monitoring,
             'args': monitor.args,
-            'expanded_args': monitor.expanded_args,
+            'expanded_args': monitor.get_expanded_args(),
             'monitor_description': monitor.get_description(),
             'monitor_def': {
                 'id': monitor.monitor_def.id,

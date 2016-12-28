@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1 class="table-heading">Active monitor definition</h1>
+    <table class="table kvp-table">
+        <tr>
+            <td>Name</td>
+            <td>{{ sql_monitor_def.name }}</td>
+        </tr>
+        <tr>
+            <td>Description</td>
+            <td>{{ sql_monitor_def.description }}</td>
+        </tr>
+        <tr>
+            <td>Active</td>
+            <td>{{ sql_monitor_def.active }}</td>
+        </tr>
+        <tr>
+            <td>Service check filename</td>
+            <td>{{ sql_monitor_def.cmdline_filename }}</td>
+        </tr>
+        <tr>
+            <td>Service check argument template</td>
+            <td>{{ sql_monitor_def.cmdline_args_tmpl }}</td>
+        </tr>
+        <tr>
+            <td>Monitor description template</td>
+            <td>{{ sql_monitor_def.description_tmpl }}</td>
+        </tr>
+    </table>
+    <br>
+    <h2 class="table-heading">Arguments</h2>
+    <table class="table kvp-table">
+        {% for arg in sql_monitor_def.args %}
+            <tr>
+                <td>{{ arg.id }}</td>
+                <td>{{ arg.name }}</td>
+                <td>{{ arg.display_name }}</td>
+                <td>{{ arg.description }}</td>
+                <td>{{ arg.required }}</td>
+                <td>{{ arg.default_value }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

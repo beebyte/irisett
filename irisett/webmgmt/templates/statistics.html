@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block body %}
+    <h2 class="table-heading">Global</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Process startup</td>
+            <td>{{ stats.global_startup|timestamp }}</td>
+        </tr>
+    </table>
+    <h2 class="table-heading">Active monitors</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Total jobs run</td>
+            <td>{{ stats.ACT_MON.total_jobs_run }}</td>
+        </tr>
+        <tr>
+            <td>Checks down</td>
+            <td>{{ stats.ACT_MON.checks_down }}</td>
+        </tr>
+        <tr>
+            <td>Checks up</td>
+            <td>{{ stats.ACT_MON.checks_up }}</td>
+        </tr>
+        <tr>
+            <td>Checks unknown</td>
+            <td>{{ stats.ACT_MON.check_unknown }}</td>
+        </tr>
+        <tr>
+            <td>Currently running jobs</td>
+            <td>{{ stats.ACT_MON.cur_running_jobs }}</td>
+        </tr>
+        <tr>
+            <td>Deferred jobs</td>
+            <td>{{ stats.ACT_MON.jobs_deferred }}</td>
+        </tr>
+        <tr>
+            <td>Number of monitors</td>
+            <td>{{ stats.ACT_MON.num_monitors }}</td>
+        </tr>
+    </table>
+    <h2 class="table-heading">SQL</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Queries</td>
+            <td>{{ stats.SQL.queries }}</td>
+        </tr>
+        <tr>
+            <td>Transactions</td>
+            <td>{{ stats.SQL.transactions }}</td>
+        </tr>
+    </table>
+    <h2 class="table-heading">Web API</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Number of calls</td>
+            <td>{{ stats.WEBAPI.num_calls }}</td>
+        </tr>
+    </table>
+    <h2 class="table-heading">Web management</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Number of calls</td>
+            <td>{{ stats.WEBMGMT.num_calls }}</td>
+        </tr>
+    </table>
+    <h2 class="table-heading">Events</h2>
+    <table class="table kvp-table">
+        <tr>
+            <td>Number of listeners</td>
+            <td>{{ stats.EVENT.num_listeners }}</td>
+        </tr>
+        <tr>
+            <td>Number of events</td>
+            <td>{{ stats.EVENT.events_fired }}</td>
+        </tr>
+    </table>
+{% endblock %}

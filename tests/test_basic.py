@@ -1,3 +1,4 @@
+# noinspection PyPackageRequirements
 import pytest
 from irisett.sql import DBConnection
 from irisett.notify.manager import NotificationManager

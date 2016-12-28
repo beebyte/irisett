@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1 class="table-heading">Contact</h1>
+    <table class="table kvp-table">
+        <tr>
+            <td>Name</td>
+            <td>{{ contact.name }}</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>{{ contact.email }}</td>
+        </tr>
+        <tr>
+            <td>Phone</td>
+            <td>{{ contact.phone }}</td>
+        </tr>
+        <tr>
+            <td>Active</td>
+            <td>{{ contact.active }}</td>
+        </tr>
+    </table>
+{% endblock %}
