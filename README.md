@@ -15,9 +15,9 @@ uses the vast array of Nagios plugins that are available.
 Irisett is _not_ a metric collection system. It is intended for active
 service monitoring, ie. ping checks, http checks etc.
 
-Irisett currently does _not_ provide a web interface. Its primary use is for
-integration with other systems and we haven't gotten around to building a
-separate web interface just for irisett.
+Irisett includes a very basic (optional) web interface that can be used to
+view the running system. No updates are currently supported in the web
+interface.
 
 
 Features
