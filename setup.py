@@ -24,6 +24,7 @@ packages = [
     'irisett.monitor',
     'irisett.notify',
     'irisett.webapi',
+    'irisett.webmgmt',
 ]
 
 install_requires = [
