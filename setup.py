@@ -44,7 +44,7 @@ install_requires = [
 
 setup(
     name='irisett',
-    version='1.0.0',
+    version='1.1.0',
     description='Irisett monitoring engine',
     long_description=long_description,
     author='beebyte AB',
