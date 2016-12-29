@@ -72,7 +72,7 @@ class EventListener:
         ret = True
         if self.event_filter and event_name not in self.event_filter:
             ret = False
-        elif self.active_monitor_filter and 'monitor' in args and args['monitor'].monitor_type() == 'active' \
+        elif self.active_monitor_filter and 'monitor' in args and args['monitor'].monitor_type == 'active' \
                 and args['monitor'].id not in self.active_monitor_filter:
             ret = False
         return ret
