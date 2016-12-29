@@ -27,6 +27,10 @@ packages = [
     'irisett.webmgmt',
 ]
 
+package_data = {
+    'irisett.webmgmt': ['static/*', 'templates/*']
+}
+
 install_requires = [
     'aiodns',
     'aiohttp',
@@ -48,6 +52,7 @@ setup(
     url='http://www.github.com/beebyte/irisett/',
     license='MIT',
     packages=packages,
+    package_data=package_data,
     scripts=['scripts/irisett', 'scripts/irisett-cli'],
     install_requires=install_requires,
     classifiers=[
