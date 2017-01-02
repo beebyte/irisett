@@ -4,6 +4,8 @@ These tables are automatically created if they are missing when
 irisett starts up.
 """
 
+# The current active version of the database, increase when making changes
+# and create upgrade queries in SQL_UPGRADES below.
 CUR_VERSION = 1
 
 SQL_VERSION = [
@@ -261,8 +263,14 @@ SQL_MONITORS = [
     """insert into active_monitor_args (monitor_id, name, value) values (1, "hostname", "127.0.0.1")""",
 ]
 
+# The queries to run for an emptry database
 SQL_BARE = SQL_TABLES + SQL_VERSION
+
+# The queries to run when adding default monitors.
 SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
 
+# Queries to run when upgrade the database.
+# Add a new section for each version, ie:
+# { VERSION: [COMMANDS ...]
 SQL_UPGRADES = {
 }
