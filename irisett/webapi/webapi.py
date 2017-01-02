@@ -26,6 +26,7 @@ def setup_routes(app: web.Application):
     app.router.add_route('*', '/active_monitor_def/', view.ActiveMonitorDefView)
     app.router.add_route('*', '/active_monitor_def_arg/', view.ActiveMonitorDefArgView)
     app.router.add_route('*', '/monitor_group/', view.MonitorGroupView)
+    app.router.add_route('*', '/monitor_group_active_monitor/', view.MonitorGroupActiveMonitorView)
     app.router.add_route('*', '/contact/', view.ContactView)
     app.router.add_route('*', '/metadata/', view.MetadataView)
     app.router.add_route('*', '/bindata/', view.BindataView)

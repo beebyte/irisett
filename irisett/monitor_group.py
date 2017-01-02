@@ -73,11 +73,11 @@ async def add_active_monitor_to_monitor_group(dbcon: DBConnection, monitor_group
     """Connect a monitor_group and an active monitor."""
     q = """select id from active_monitors where id=%s"""
     rows = await dbcon.fetch_row(q, (monitor_id,))
-    if len(rows) != 1:
+    if not rows or len(rows) != 1:
         raise errors.InvalidArguments('monitor does not exist')
     q = """select id from monitor_groups where id=%s"""
     rows = await dbcon.fetch_row(q, (monitor_group_id,))
-    if len(rows) != 1:
+    if not rows or len(rows) != 1:
         raise errors.InvalidArguments('monitor_group does not exist')
     q = """replace into monitor_group_active_monitors (monitor_group_id, active_monitor_id) values (%s, %s)"""
     q_args = (monitor_group_id, monitor_id)

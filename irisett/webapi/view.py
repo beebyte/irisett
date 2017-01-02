@@ -588,6 +588,24 @@ class MonitorGroupView(web.View):
         return web.json_response(True)
 
 
+class MonitorGroupActiveMonitorView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_active_monitor_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_active_monitor_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+
 class MetadataView(web.View):
     async def get(self) -> web.Response:
         object_type = cast(str, require_str(get_request_param(self.request, 'object_type')))

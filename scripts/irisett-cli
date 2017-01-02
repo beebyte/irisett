@@ -206,6 +206,17 @@ def parse_args():
     cmd.add_argument('-i', '--monitor-group-id', type=int, required=True, help='Monitor group id')
     cmd.set_defaults(func=delete_monitor_group)
 
+    cmd = subparsers.add_parser('add-monitor-group-active-monitor', help='Add an active monitor to a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.set_defaults(func=add_monitor_group_active_monitor)
+
+    cmd = subparsers.add_parser('delete-monitor-group-active-monitor',
+                                help='Delete an active monitor from a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.set_defaults(func=delete_monitor_group_active_monitor)
+
     args = parser.parse_args()
     return parser, args
 
@@ -680,6 +691,32 @@ def delete_monitor_group(args):
         print(res)
 
 
+def add_monitor_group_active_monitor(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'monitor_id': args.monitor_id,
+    }
+    url = 'http://%s:%s/monitor_group_active_monitor/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_monitor_group_active_monitor(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'monitor_id': args.monitor_id,
+    }
+    url = 'http://%s:%s/monitor_group_active_monitor/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
 
 
 def main():
