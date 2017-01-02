@@ -15,8 +15,6 @@ from irisett import (
 
 from irisett import sql_data
 
-VERSION = 1
-
 
 class DBConnection:
     """A sql connection manager."""
@@ -54,6 +52,7 @@ class DBConnection:
             db=self.dbname, loop=self.loop)
         if not db_initialized:
             await self._init_db(only_init_tables)
+        await self._upgrade_db()
         log.msg('Database initialized')
 
     async def close(self):
@@ -72,10 +71,9 @@ class DBConnection:
         log.msg('Initializing empty database')
         commands = sql_data.SQL_ALL
         if only_init_tables:
-            commands = sql_data.SQL_TABLES
+            commands = sql_data.SQL_BARE
         for command in commands:
             await self.operation(command)
-        await self._set_version(VERSION)
 
     async def _check_db_exists(self) -> bool:
         """Check if the database exists."""
@@ -97,13 +95,30 @@ class DBConnection:
             return False
         return True
 
-    async def _set_version(self, version: int) -> bool:
-        """Sets the current db version in the version table."""
-        q = """delete from version"""
-        await self.operation(q)
-        q = """insert into version (version) values (%s)"""
-        await self.operation(q, (version,))
-        return True
+    async def _upgrade_db(self):
+        """Upgrade to a newer database version if required.
+
+        Loops through the commands in sql_data.SQL_UPGRADES and runs them.
+        """
+        cur_version = await self._get_db_version()
+        for n in range(cur_version + 1, sql_data.CUR_VERSION + 1):
+            log.msg('Upgrading database to version %d' % n)
+            if n in sql_data.SQL_UPGRADES:
+                for command in sql_data.SQL_UPGRADES[n]:
+                    await self.operation(command)
+        if cur_version != sql_data.CUR_VERSION:
+            await self._set_db_version(sql_data.CUR_VERSION)
+
+    async def _get_db_version(self) -> int:
+        q = """select version from version limit 1"""
+        str_version = await self.fetch_single(q)
+        version = int(str_version)
+        return version
+
+    async def _set_db_version(self, version: int):
+        q = """update version set version=%s"""
+        q_args = (version,)
+        await self.operation(q, q_args)
 
     async def fetch_all(self, query: str, args: Optional[Iterable]=None) -> List:
         """Run a query and fetch all returned rows."""
