@@ -52,7 +52,6 @@ async def delete_monitor_group(dbcon: DBConnection, monitor_group_id: int):
     await dbcon.transact(_run)
 
 
-
 async def monitor_group_exists(dbcon: DBConnection, monitor_group_id: int) -> bool:
     """Check if a monitor group id exists."""
     q = """select id from monitor_groups where id=%s"""
@@ -83,4 +82,3 @@ async def delete_active_monitor_from_monitor_group(dbcon: DBConnection, monitor_
     q = """delete from monitor_group_active_monitors where monitor_group_id=%s and active_monitor_id=%s"""
     q_args = (monitor_group_id, monitor_id)
     await dbcon.operation(q, q_args)
-
