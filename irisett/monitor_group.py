@@ -11,7 +11,8 @@ from irisett import errors
 from irisett.object_exists import (
     monitor_group_exists,
     contact_exists,
-    active_monitor_exists
+    active_monitor_exists,
+    contact_group_exists,
 )
 
 async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], name: str):
@@ -82,4 +83,48 @@ async def delete_active_monitor_from_monitor_group(dbcon: DBConnection, monitor_
         raise errors.InvalidArguments('monitor_group does not exist')
     q = """delete from monitor_group_active_monitors where monitor_group_id=%s and active_monitor_id=%s"""
     q_args = (monitor_group_id, monitor_id)
+    await dbcon.operation(q, q_args)
+
+
+async def add_contact_to_monitor_group(dbcon: DBConnection, monitor_group_id: int, contact_id: int):
+    """Connect a monitor_group and a contact."""
+    if not await contact_exists(dbcon, contact_id):
+        raise errors.InvalidArguments('contact does not exist')
+    if not await monitor_group_exists(dbcon, monitor_group_id):
+        raise errors.InvalidArguments('monitor_group does not exist')
+    q = """replace into monitor_group_contacts (monitor_group_id, contact_id) values (%s, %s)"""
+    q_args = (monitor_group_id, contact_id)
+    await dbcon.operation(q, q_args)
+
+
+async def delete_contact_from_monitor_group(dbcon: DBConnection, monitor_group_id: int, contact_id: int):
+    """Remove a contact from a monitor group."""
+    if not await contact_exists(dbcon, contact_id):
+        raise errors.InvalidArguments('contact does not exist')
+    if not await monitor_group_exists(dbcon, monitor_group_id):
+        raise errors.InvalidArguments('monitor_group does not exist')
+    q = """delete from monitor_group_contacts where monitor_group_id=%s and contact_id=%s"""
+    q_args = (monitor_group_id, contact_id)
+    await dbcon.operation(q, q_args)
+
+
+async def add_contact_group_to_monitor_group(dbcon: DBConnection, monitor_group_id: int, contact_group_id: int):
+    """Connect a monitor_group and a contact group."""
+    if not await contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact group does not exist')
+    if not await monitor_group_exists(dbcon, monitor_group_id):
+        raise errors.InvalidArguments('monitor_group does not exist')
+    q = """replace into monitor_group_contact_groups (monitor_group_id, contact_group_id) values (%s, %s)"""
+    q_args = (monitor_group_id, contact_group_id)
+    await dbcon.operation(q, q_args)
+
+
+async def delete_contact_group_from_monitor_group(dbcon: DBConnection, monitor_group_id: int, contact_group_id: int):
+    """Remove a contact group from a monitor group."""
+    if not await contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact does not exist')
+    if not await monitor_group_exists(dbcon, monitor_group_id):
+        raise errors.InvalidArguments('monitor_group does not exist')
+    q = """delete from monitor_group_contact_groups where monitor_group_id=%s and contact_group_id=%s"""
+    q_args = (monitor_group_id, contact_group_id)
     await dbcon.operation(q, q_args)

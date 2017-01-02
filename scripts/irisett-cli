@@ -217,6 +217,28 @@ def parse_args():
     cmd.add_argument('--monitor-id', required=True, help='Monitor id')
     cmd.set_defaults(func=delete_monitor_group_active_monitor)
 
+    cmd = subparsers.add_parser('add-monitor-group-contact', help='Add a contact to a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=add_monitor_group_contact)
+
+    cmd = subparsers.add_parser('delete-monitor-group-contact',
+                                help='Delete a contact from a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=delete_monitor_group_contact)
+
+    cmd = subparsers.add_parser('add-monitor-group-contact-group', help='Add a contact group to a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.set_defaults(func=add_monitor_group_contact_group)
+
+    cmd = subparsers.add_parser('delete-monitor-group-contact-group',
+                                help='Delete a contact group from a monitor group')
+    cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.set_defaults(func=delete_monitor_group_contact_group)
+
     args = parser.parse_args()
     return parser, args
 
@@ -711,6 +733,62 @@ def delete_monitor_group_active_monitor(args):
         'monitor_id': args.monitor_id,
     }
     url = 'http://%s:%s/monitor_group_active_monitor/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def add_monitor_group_contact(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/monitor_group_contact/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_monitor_group_contact(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/monitor_group_contact/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def add_monitor_group_contact_group(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'contact_group_id': args.contact_group_id,
+    }
+    url = 'http://%s:%s/monitor_group_contact_group/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_monitor_group_contact_group(args):
+    data = {
+        'monitor_group_id': args.monitor_group_id,
+        'contact_group_id': args.contact_group_id,
+    }
+    url = 'http://%s:%s/monitor_group_contact_group/' % (args.host, args.port)
     request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))

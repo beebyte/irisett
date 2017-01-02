@@ -606,6 +606,42 @@ class MonitorGroupActiveMonitorView(web.View):
         return web.json_response(True)
 
 
+class MonitorGroupContactView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_contact_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_contact_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+
+class MonitorGroupContactGroupView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_contact_group_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_group_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_contact_group_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_group_id'))))
+        return web.json_response(True)
+
+
 class MetadataView(web.View):
     async def get(self) -> web.Response:
         object_type = cast(str, require_str(get_request_param(self.request, 'object_type')))

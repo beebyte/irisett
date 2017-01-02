@@ -31,3 +31,9 @@ async def active_monitor_exists(dbcon: DBConnection, active_monitor_id: int) -> 
     """Check if a contact id exists."""
     q = """select count(id) from active_monitors where id=%s"""
     return await _object_exists(dbcon, q, (active_monitor_id,))
+
+
+async def contact_group_exists(dbcon: DBConnection, contact_group_id: int) -> bool:
+    """Check if a contact group id exists."""
+    q = """select count(id) from contact_groups where id=%s"""
+    return await _object_exists(dbcon, q, (contact_group_id,))
