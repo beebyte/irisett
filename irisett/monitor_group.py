@@ -40,8 +40,17 @@ async def update_monitor_group(dbcon: DBConnection, monitor_group_id: int, data:
 
 async def delete_monitor_group(dbcon: DBConnection, monitor_group_id: int):
     """Remove a monitor_group from the database."""
-    q = """delete from monitor_groups where id=%s"""
-    await dbcon.operation(q, (monitor_group_id,))
+
+    async def _run(cur):
+        q = """delete from monitor_groups where id=%s"""
+        await cur.execute(q, (monitor_group_id,))
+        q = """delete from monitor_group_active_monitors where monitor_group_id=%s"""
+        await cur.execute(q, (monitor_group_id,))
+        q = """delete from object_metadata where object_type="monitor_group" and object_id=%s"""
+        await cur.execute(q, (monitor_group_id,))
+
+    await dbcon.transact(_run)
+
 
 
 async def monitor_group_exists(dbcon: DBConnection, monitor_group_id: int) -> bool:
@@ -74,3 +83,4 @@ async def delete_active_monitor_from_monitor_group(dbcon: DBConnection, monitor_
     q = """delete from monitor_group_active_monitors where monitor_group_id=%s and active_monitor_id=%s"""
     q_args = (monitor_group_id, monitor_id)
     await dbcon.operation(q, q_args)
+
