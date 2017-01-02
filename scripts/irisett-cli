@@ -185,6 +185,12 @@ def parse_args():
     cmd = subparsers.add_parser('get-stats', help='Get statistics for a irisett server')
     cmd.set_defaults(func=get_stats)
 
+    cmd = subparsers.add_parser('get-monitor-groups', help='Get monitor groups')
+    cmd.add_argument('-i', '--monitor-group-id', type=int, required=False, help='Monitor group id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_monitor_groups)
+
     cmd = subparsers.add_parser('add-monitor-group', help='Add monitor group')
     cmd.add_argument('--parent-id', required=False, help='Parent group id')
     cmd.add_argument('--name', required=False, help='Group name')
@@ -612,6 +618,20 @@ def get_bindata(args):
 def get_stats(args):
     url = 'http://%s:%s/statistics/' % (
         args.host, args.port)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def get_monitor_groups(args):
+    url = 'http://%s:%s/monitor_group/' % (args.host, args.port)
+    if args.monitor_group_id:
+        url = '%s?id=%s' % (url, args.monitor_group_id)
+    elif args.metadata_key and args.metadata_value:
+        url = '%s?meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
     request = requests.get(url=url, auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
