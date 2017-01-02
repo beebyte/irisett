@@ -8,7 +8,11 @@ without setting the contact(s) for each monitor.
 from typing import Optional, Dict, Any
 from irisett.sql import DBConnection
 from irisett import errors
-
+from irisett.object_exists import (
+    monitor_group_exists,
+    contact_exists,
+    active_monitor_exists
+)
 
 async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], name: str):
     """Add a monitor group to the database."""
@@ -59,25 +63,11 @@ async def delete_monitor_group(dbcon: DBConnection, monitor_group_id: int):
     await dbcon.transact(_run)
 
 
-async def monitor_group_exists(dbcon: DBConnection, monitor_group_id: int) -> bool:
-    """Check if a monitor group id exists."""
-    q = """select id from monitor_groups where id=%s"""
-    res = await dbcon.fetch_single(q, (monitor_group_id,))
-    ret = False
-    if res:
-        ret = True
-    return ret
-
-
 async def add_active_monitor_to_monitor_group(dbcon: DBConnection, monitor_group_id: int, monitor_id: int):
     """Connect a monitor_group and an active monitor."""
-    q = """select id from active_monitors where id=%s"""
-    rows = await dbcon.fetch_row(q, (monitor_id,))
-    if not rows or len(rows) != 1:
+    if not await active_monitor_exists(dbcon, monitor_id):
         raise errors.InvalidArguments('monitor does not exist')
-    q = """select id from monitor_groups where id=%s"""
-    rows = await dbcon.fetch_row(q, (monitor_group_id,))
-    if not rows or len(rows) != 1:
+    if not await monitor_group_exists(dbcon, monitor_group_id):
         raise errors.InvalidArguments('monitor_group does not exist')
     q = """replace into monitor_group_active_monitors (monitor_group_id, active_monitor_id) values (%s, %s)"""
     q_args = (monitor_group_id, monitor_id)
@@ -86,6 +76,10 @@ async def add_active_monitor_to_monitor_group(dbcon: DBConnection, monitor_group
 
 async def delete_active_monitor_from_monitor_group(dbcon: DBConnection, monitor_group_id: int, monitor_id: int):
     """Remove an active monitor from a monitor group."""
+    if not await active_monitor_exists(dbcon, monitor_id):
+        raise errors.InvalidArguments('monitor does not exist')
+    if not await monitor_group_exists(dbcon, monitor_group_id):
+        raise errors.InvalidArguments('monitor_group does not exist')
     q = """delete from monitor_group_active_monitors where monitor_group_id=%s and active_monitor_id=%s"""
     q_args = (monitor_group_id, monitor_id)
     await dbcon.operation(q, q_args)

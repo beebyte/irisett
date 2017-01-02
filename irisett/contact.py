@@ -12,6 +12,10 @@ from the database each time an alert is sent.
 from typing import Dict, Set, Iterable, Optional, Any
 from irisett import errors
 from irisett.sql import DBConnection
+from irisett.object_exists import (
+    contact_exists,
+    active_monitor_exists
+)
 
 if False:  # mypy circular import workaround.
     from irisett.monitor.active import ActiveMonitor
@@ -48,16 +52,6 @@ async def delete_contact(dbcon: DBConnection, contact_id: int):
     """Remove a contact from the database."""
     q = """delete from contacts where id=%s"""
     await dbcon.operation(q, (contact_id,))
-
-
-async def contact_exists(dbcon: DBConnection, contact_id: int) -> bool:
-    """Check if a contact id exists."""
-    q = """select id from contacts where id=%s"""
-    res = await dbcon.fetch_single(q, (contact_id,))
-    ret = False
-    if res:
-        ret = True
-    return ret
 
 
 async def get_contact_dict_for_active_monitor(dbcon: DBConnection, monitor: 'ActiveMonitor') -> Dict[str, set]:
@@ -120,13 +114,9 @@ async def get_group_contacts_for_active_monitor(dbcon: DBConnection, monitor_id:
 
 async def add_contact_to_active_monitor(dbcon: DBConnection, contact_id: int, monitor_id: int):
     """Connect a contact and an active monitor."""
-    q = """select id from active_monitors where id=%s"""
-    rows = await dbcon.fetch_row(q, (monitor_id,))
-    if len(rows) != 1:
+    if not await active_monitor_exists(dbcon, monitor_id):
         raise errors.InvalidArguments('monitor does not exist')
-    q = """select id from contacts where id=%s"""
-    rows = await dbcon.fetch_row(q, (contact_id,))
-    if len(rows) != 1:
+    if not await contact_exists(dbcon, contact_id):
         raise errors.InvalidArguments('contact does not exist')
     q = """replace into active_monitor_contacts (active_monitor_id, contact_id) values (%s, %s)"""
     q_args = (monitor_id, contact_id)
@@ -156,8 +146,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
             q_args = (monitor_id, contact_id)
             await cur.execute(q, q_args)
 
-    _q = """select id from active_monitors where id=%s"""
-    if await dbcon.count_rows(_q, (monitor_id,)) != 1:
+    if not await active_monitor_exists(dbcon, monitor_id):
         raise errors.InvalidArguments('monitor does not exist')
     await dbcon.transact(_run)
 
