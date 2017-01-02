@@ -106,12 +106,19 @@ class DBConnection:
                 log.msg('Upgrading database to version %d' % n)
                 for command in sql_data.SQL_UPGRADES[n]:
                     await self.operation(command)
+        if cur_version != sql_data.CUR_VERSION:
+            await self._set_db_version(sql_data.CUR_VERSION)
 
     async def _get_db_version(self) -> int:
         q = """select version from version limit 1"""
         str_version = await self.fetch_single(q)
         version = int(str_version)
         return version
+
+    async def _set_db_version(self, version: int):
+        q = """update version set version=%s"""
+        q_args = (version,)
+        await self.operation(q, q_args)
 
     async def fetch_all(self, query: str, args: Optional[Iterable]=None) -> List:
         """Run a query and fetch all returned rows."""
