@@ -33,7 +33,12 @@ async def update_monitor_group(dbcon: DBConnection, monitor_group_id: int, data:
         for key, value in data.items():
             if key not in ['parent_id', 'name']:
                 raise errors.IrisettError('invalid monitor_group key %s' % key)
-            q = """update monitor_group set %s=%%s where id=%%s""" % key
+            if key == 'parent_id' and value:
+                if monitor_group_id == int(value):
+                    raise errors.InvalidArguments('monitor group can\'t be its own parent')
+                if not await monitor_group_exists(dbcon, value):
+                    raise errors.InvalidArguments('parent monitor group does not exist')
+            q = """update monitor_groups set %s=%%s where id=%%s""" % key
             q_args = (value, monitor_group_id)
             await cur.execute(q, q_args)
 
