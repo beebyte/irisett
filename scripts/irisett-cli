@@ -193,7 +193,7 @@ def parse_args():
     cmd = subparsers.add_parser('update-monitor-group', help='Update monitor group')
     cmd.add_argument('--name', required=False, help='Contact name')
     cmd.add_argument('--parent-id', required=False, help='Contact email')
-    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor group id')
+    cmd.add_argument('-i', '--monitor-group-id', type=int, required=True, help='Monitor group id')
     cmd.set_defaults(func=update_monitor_group)
 
     cmd = subparsers.add_parser('delete-monitor-group', help='Delete monitor group')
@@ -637,11 +637,11 @@ def add_monitor_group(args):
 
 def update_monitor_group(args):
     data = {}
-    if args.name:
+    if args.parent_id:
         data['parent_id'] = args.parent_id
     if args.name:
         data['name'] = args.name
-    url = 'http://%s:%s/monitor_group/?id=%s' % (args.host, args.port, args.def_id)
+    url = 'http://%s:%s/monitor_group/?id=%s' % (args.host, args.port, args.monitor_group_id)
     request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
