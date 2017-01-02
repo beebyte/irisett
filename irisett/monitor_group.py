@@ -13,6 +13,8 @@ from irisett import errors
 async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], name: str):
     """Add a monitor group to the database."""
     if parent_id:
+        if not await monitor_group_exists(dbcon, parent_id):
+            raise errors.InvalidArguments('parent monitor group does not exist')
         q = """insert into monitor_groups (parent_id, name) values (%s, %s)"""
         q_args = (parent_id, name)
     else:
