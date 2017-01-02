@@ -65,6 +65,8 @@ async def get_contact_dict_for_active_monitor(dbcon: DBConnection, monitor: 'Act
     }  # type: Dict[str, set]
     await get_direct_contacts_for_active_monitor(dbcon, monitor.id, ret['email'], ret['phone'])
     await get_group_contacts_for_active_monitor(dbcon, monitor.id, ret['email'], ret['phone'])
+    await get_monitor_group_direct_contacts_for_active_monitor(dbcon, monitor.id, ret['email'], ret['phone'])
+    await get_monitor_group_group_contacts_for_active_monitor(dbcon, monitor.id, ret['email'], ret['phone'])
     return ret
 
 
@@ -103,6 +105,52 @@ async def get_group_contacts_for_active_monitor(dbcon: DBConnection, monitor_id:
         and contact_groups.id = contact_group_contacts.contact_group_id
         and contact_group_contacts.contact_id = contacts.id
         and contacts.active = true"""
+    q_args = (monitor_id,)
+    rows = await dbcon.fetch_all(q, q_args)
+    for email, phone in rows:
+        if email:
+            email_set.add(email)
+        if phone:
+            phone_set.add(phone)
+
+
+async def get_monitor_group_direct_contacts_for_active_monitor(
+        dbcon: DBConnection, monitor_id: int, email_set: Set[str], phone_set: Set[str]):
+    """Called from get_contact_dict_for_active_monitor.
+
+    Updates email/phone sets for contact groups (contacts) attached to a monitor.
+    """
+    q = """select contacts.email, contacts.phone
+        from monitor_group_active_monitors
+        left join monitor_groups on monitor_group_active_monitors.monitor_group_id=monitor_groups.id
+        left join monitor_group_contacts on monitor_group_contacts.monitor_group_id=monitor_groups.id
+        left join contacts on contacts.id=monitor_group_contacts.contact_id
+        where monitor_group_active_monitors.active_monitor_id=%s and contacts.active = true"""
+    q_args = (monitor_id,)
+    rows = await dbcon.fetch_all(q, q_args)
+    for email, phone in rows:
+        if email:
+            email_set.add(email)
+        if phone:
+            phone_set.add(phone)
+
+
+async def get_monitor_group_group_contacts_for_active_monitor(
+        dbcon: DBConnection, monitor_id: int, email_set: Set[str], phone_set: Set[str]):
+    """Called from get_contact_dict_for_active_monitor.
+
+    Updates email/phone sets for contact groups (contact groups) attached to a monitor.
+    """
+    q = """select contacts.email, contacts.phone
+        from monitor_group_active_monitors
+        left join monitor_groups on monitor_group_active_monitors.monitor_group_id=monitor_groups.id
+        left join monitor_group_contact_groups on monitor_group_contact_groups.monitor_group_id=monitor_groups.id
+        left join contact_groups on contact_groups.id=monitor_group_contact_groups.contact_group_id
+        left join contact_group_contacts on contact_group_contacts.contact_group_id=contact_groups.id
+        left join contacts on contacts.id=contact_group_contacts.contact_id
+        where monitor_group_active_monitors.active_monitor_id=%s
+        and contact_groups.active=true
+        and contacts.active=true"""
     q_args = (monitor_id,)
     rows = await dbcon.fetch_all(q, q_args)
     for email, phone in rows:
