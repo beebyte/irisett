@@ -190,7 +190,7 @@ def parse_args():
     cmd.add_argument('--name', required=False, help='Group name')
     cmd.set_defaults(func=add_monitor_group)
 
-    cmd = subparsers.add_parser('update-monitor_group', help='Update monitor group')
+    cmd = subparsers.add_parser('update-monitor-group', help='Update monitor group')
     cmd.add_argument('--name', required=False, help='Contact name')
     cmd.add_argument('--parent-id', required=False, help='Contact email')
     cmd.add_argument('-i', '--def-id', type=int, required=True, help='Monitor group id')
@@ -199,8 +199,6 @@ def parse_args():
     cmd = subparsers.add_parser('delete-monitor-group', help='Delete monitor group')
     cmd.add_argument('-i', '--monitor-group-id', type=int, required=True, help='Monitor group id')
     cmd.set_defaults(func=delete_monitor_group)
-
-
 
     args = parser.parse_args()
     return parser, args
