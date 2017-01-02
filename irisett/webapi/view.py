@@ -9,6 +9,7 @@ from irisett import (
     bindata,
     stats,
     utils,
+    monitor_group,
 )
 from irisett.webapi import (
     errors,
@@ -505,6 +506,85 @@ class ContactView(web.View):
         if not exists:
             raise errors.NotFound()
         await delete_contact(dbcon, contact_id)
+        return web.json_response(True)
+
+
+class MonitorGroupView(web.View):
+    async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
+        # noinspection PyUnusedLocal
+        q_args = ()  # type: Tuple
+        if 'id' in self.request.rel_url.query:
+            monitor_group_id = require_int(get_request_param(self.request, 'id'))
+            q = """select id, parent_id, name from monitor_groups where id=%s"""
+            q_args = (monitor_group_id,)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, monitor_groups
+                where monitor_groups.id=%s and meta.object_type="monitor_group" and meta.object_id=monitor_group.id"""
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            q = """select mg.id, mg.parent_id, mg.name
+                from monitor_groups as mg, object_metadata as meta
+                where meta.key=%s and meta.value=%s and meta.object_type="monitor_group" and meta.object_id=mg.id"""
+            q_args = (meta_key, meta_value)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select m2.object_id, m2.key, m2.value
+                        from object_metadata as m1
+                        left join monitor_groups on monitor_groups.id=m1.object_id
+                        left join object_metadata as m2 on m2.object_id=contacts.id
+                        where m1.key=%s and m1.value=%s and m2.object_type="monitor_group"
+            """
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        else:
+            q = """select id, parent_id, name from monitor_groups"""
+            rows = await dbcon.fetch_all(q)
+            meta_q = '''select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, monitor_groups
+                where meta.object_id=monitor_groups.id and meta.object_type="monitor_group"'''
+            meta_rows = await dbcon.fetch_all(meta_q)
+        monitor_groups = {}
+        for id, parent_id, name in rows:
+            monitor_group = {
+                'id': id,
+                'parent_id': parent_id,
+                'name': name,
+                'metadata': {}
+            }
+            monitor_groups[id] = monitor_group
+        for id, key, value in meta_rows:
+            if id in monitor_groups:
+                monitor_groups[id]['metadata'][key] = value
+        return web.json_response(list(monitor_groups.values()))
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        monitor_group_id = await monitor_group.create_monitor_group(
+            self.request.app['dbcon'],
+            require_int(request_data.get('parent_id', None), allow_none=True),
+            require_str(request_data.get('name', None), allow_none=True)
+        )
+        return web.json_response(monitor_group_id)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        monitor_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        exists = await monitor_group.monitor_group_exists(dbcon, monitor_group_id)
+        if not exists:
+            raise errors.NotFound()
+        await monitor_group.update_monitor_group(dbcon, monitor_group_id, request_data)
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        monitor_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        exists = await monitor_group.monitor_group_exists(dbcon, monitor_group_id)
+        if not exists:
+            raise errors.NotFound()
+        await monitor_group.delete_monitor_group(dbcon, monitor_group_id)
         return web.json_response(True)
 
 
