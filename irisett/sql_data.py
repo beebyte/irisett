@@ -6,7 +6,7 @@ irisett starts up.
 
 # The current active version of the database, increase when making changes
 # and create upgrade queries in SQL_UPGRADES below.
-CUR_VERSION = 1
+CUR_VERSION = 2
 
 SQL_VERSION = [
     """insert into version (version) values ('%s')""" % str(CUR_VERSION),
@@ -159,8 +159,11 @@ SQL_TABLES = [
         create table monitor_groups
         (
             `id` INT NOT NULL AUTO_INCREMENT,
+            `parent_id` INT NULL,
             `name` varchar(100),
-            PRIMARY KEY (`id`)
+            PRIMARY KEY (`id`),
+            KEY `parent_idx` (`parent_id`),
+            KEY `name_idx` (`name`)
         )
         """,
     """
@@ -273,4 +276,9 @@ SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
 # Add a new section for each version, ie:
 # { VERSION: [COMMANDS ...]
 SQL_UPGRADES = {
+    2: [
+        """ALTER TABLE `monitor_groups` ADD `parent_id` INT NULL AFTER `id`""",
+        """ALTER TABLE `monitor_groups` ADD INDEX `parent_idx` (`parent_id`)""",
+        """ALTER TABLE `monitor_groups` ADD INDEX `name_idx` (`name`)""",
+    ]
 }
