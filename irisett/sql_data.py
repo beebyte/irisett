@@ -4,8 +4,10 @@ These tables are automatically created if they are missing when
 irisett starts up.
 """
 
+CUR_VERSION = 1
+
 SQL_VERSION = [
-    """insert into version (version) values ('1')""",
+    """insert into version (version) values ('%s')""" % str(CUR_VERSION),
 ]
 
 # noinspection PyPep8
@@ -263,7 +265,4 @@ SQL_BARE = SQL_TABLES + SQL_VERSION
 SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
 
 SQL_UPGRADES = {
-    '1': [
-
-    ]
 }
