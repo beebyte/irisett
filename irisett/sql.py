@@ -15,8 +15,6 @@ from irisett import (
 
 from irisett import sql_data
 
-VERSION = 1
-
 
 class DBConnection:
     """A sql connection manager."""
@@ -72,10 +70,9 @@ class DBConnection:
         log.msg('Initializing empty database')
         commands = sql_data.SQL_ALL
         if only_init_tables:
-            commands = sql_data.SQL_TABLES
+            commands = sql_data.SQL_BARE
         for command in commands:
             await self.operation(command)
-        await self._set_version(VERSION)
 
     async def _check_db_exists(self) -> bool:
         """Check if the database exists."""
@@ -95,14 +92,6 @@ class DBConnection:
         res = await self.fetch_single(q, (self.dbname, 'version'))
         if res == 0:
             return False
-        return True
-
-    async def _set_version(self, version: int) -> bool:
-        """Sets the current db version in the version table."""
-        q = """delete from version"""
-        await self.operation(q)
-        q = """insert into version (version) values (%s)"""
-        await self.operation(q, (version,))
         return True
 
     async def fetch_all(self, query: str, args: Optional[Iterable]=None) -> List:

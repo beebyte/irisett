@@ -4,6 +4,10 @@ These tables are automatically created if they are missing when
 irisett starts up.
 """
 
+SQL_VERSION = [
+    """insert into version (version) values ('1')""",
+]
+
 # noinspection PyPep8
 SQL_TABLES = [
     """
@@ -183,6 +187,7 @@ SQL_TABLES = [
         )
         """,
 ]
+
 SQL_MONITOR_DEFS = [
     """insert into active_monitor_defs (name, description, active, cmdline_filename,
         cmdline_args_tmpl, description_tmpl)
@@ -254,4 +259,11 @@ SQL_MONITORS = [
     """insert into active_monitor_args (monitor_id, name, value) values (1, "hostname", "127.0.0.1")""",
 ]
 
-SQL_ALL = SQL_TABLES + SQL_MONITOR_DEFS + SQL_MONITORS
+SQL_BARE = SQL_TABLES + SQL_VERSION
+SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
+
+SQL_UPGRADES = {
+    '1': [
+
+    ]
+}
