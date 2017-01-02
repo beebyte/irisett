@@ -102,8 +102,8 @@ class DBConnection:
         """
         cur_version = await self._get_db_version()
         for n in range(cur_version + 1, sql_data.CUR_VERSION + 1):
+            log.msg('Upgrading database to version %d' % n)
             if n in sql_data.SQL_UPGRADES:
-                log.msg('Upgrading database to version %d' % n)
                 for command in sql_data.SQL_UPGRADES[n]:
                     await self.operation(command)
         if cur_version != sql_data.CUR_VERSION:
