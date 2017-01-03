@@ -17,6 +17,8 @@ from irisett.object_exists import (
 
 async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], name: str):
     """Add a monitor group to the database."""
+    if not name:
+        raise errors.InvalidArguments('missing monitor group name')
     if parent_id:
         if not await monitor_group_exists(dbcon, parent_id):
             raise errors.InvalidArguments('parent monitor group does not exist')

@@ -193,7 +193,7 @@ def parse_args():
 
     cmd = subparsers.add_parser('add-monitor-group', help='Add monitor group')
     cmd.add_argument('--parent-id', required=False, help='Parent group id')
-    cmd.add_argument('--name', required=False, help='Group name')
+    cmd.add_argument('--name', required=True, help='Group name')
     cmd.set_defaults(func=add_monitor_group)
 
     cmd = subparsers.add_parser('update-monitor-group', help='Update monitor group')
