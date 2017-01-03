@@ -30,6 +30,7 @@ from irisett.contact import (
     delete_contact_from_active_monitor,
     get_contacts_for_active_monitor,
     set_active_monitor_contacts,
+    get_all_contacts_for_active_monitor,
 )
 from irisett.webapi.require import (
     require_int,
@@ -273,7 +274,10 @@ class ActiveMonitorAlertView(web.View):
 class ActiveMonitorContactView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
-        ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        if 'include_all' in self.request.rel_url.query:
+            ret = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        else:
+            ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         return web.json_response(ret)
 
     async def post(self) -> web.Response:

@@ -156,6 +156,7 @@ def parse_args():
 
     cmd = subparsers.add_parser('get-active-monitor-contacts', help='Get contact for an active monitor')
     cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.add_argument('--all', default=False, action='store_true', help='Include all contacts, from monitor groups etc.')
     cmd.set_defaults(func=get_active_monitor_contacts)
 
     cmd = subparsers.add_parser('get-active-monitor-alerts', help='Get active monitor alerts')
@@ -575,6 +576,8 @@ def delete_metadata(args):
 def get_active_monitor_contacts(args):
     url = 'http://%s:%s/active_monitor_contact/' % (args.host, args.port)
     url = '%s?monitor_id=%s' % (url, args.monitor_id)
+    if args.all:
+        url = '%s&include_all=1' % url
     request = requests.get(url=url, auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
