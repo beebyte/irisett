@@ -73,7 +73,7 @@ class ActiveMonitorView(web.View):
                 left join monitor_groups on monitor_groups.id=monitor_group_active_monitors.monitor_group_id
                 where monitor_groups.id=%s"""
             monitor_group_id = require_str(get_request_param(self.request, 'monitor_group_id'))
-            q_args = (monitor_group_id)
+            q_args = (monitor_group_id,)
             res = await self.request.app['dbcon'].fetch_all(q, q_args)
             ids = [n[0] for n in res]
         else:
