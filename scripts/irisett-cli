@@ -59,6 +59,7 @@ def parse_args():
     cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
     cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
     cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.add_argument('-g', '--monitor-group-id', required=False, help='Monitor group id')
     cmd.set_defaults(func=get_active_monitors)
 
     cmd = subparsers.add_parser('get-active-monitor-defs', help='List active monitor definitions')
@@ -360,6 +361,8 @@ def get_active_monitors(args):
         url = '%s&id=%s' % (url, args.monitor_id)
     elif args.metadata_key and args.metadata_value:
         url = '%s&meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
+    elif args.monitor_group_id:
+        url = '%s&monitor_group_id=%s' % (url, args.monitor_group_id)
     request = requests.get(url=url, auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))

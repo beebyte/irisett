@@ -67,6 +67,15 @@ class ActiveMonitorView(web.View):
             q_args = (meta_key, meta_value)
             res = await self.request.app['dbcon'].fetch_all(q, q_args)
             ids = [n[0] for n in res]
+        elif 'monitor_group_id' in self.request.rel_url.query:
+            q = """select monitors.id from active_monitors as monitors
+                left join monitor_group_active_monitors on monitor_group_active_monitors.active_monitor_id=monitors.id
+                left join monitor_groups on monitor_groups.id=monitor_group_active_monitors.monitor_group_id
+                where monitor_groups.id=%s"""
+            monitor_group_id = require_str(get_request_param(self.request, 'monitor_group_id'))
+            q_args = (monitor_group_id)
+            res = await self.request.app['dbcon'].fetch_all(q, q_args)
+            ids = [n[0] for n in res]
         else:
             q = """select id from active_monitors"""
             res = await self.request.app['dbcon'].fetch_all(q)
