@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block submenus %}
+    <div class="submenu">
+        <a {% if subsection == "contacts" %}class="menu-active" {% endif %}href="/contact/">Contacts</a> |
+        <a {% if subsection == "groups" %}class="menu-active" {% endif %}href="/contact/group/">Contacts groups</a>
+    </div>
+{% endblock %}

@@ -212,6 +212,7 @@ class ListContactsView(web.View):
     async def get(self) -> Dict[str, Any]:
         context = {
             'section': 'contacts',
+            'subsection': 'contacts',
             'contacts': await contact.get_all_contacts(self.request.app['dbcon']),
         }
         return context
@@ -225,6 +226,35 @@ class DisplayContactView(web.View):
             raise errors.NotFound()
         context = {
             'section': 'contacts',
+            'subsection': 'contacts',
             'contact': c,
+        }
+        return context
+
+class ListContactGroupsView(web.View):
+    @aiohttp_jinja2.template('list_contact_groups.html')
+    async def get(self) -> Dict[str, Any]:
+        context = {
+            'section': 'contacts',
+            'subsection': 'groups',
+            'contact_groups': await contact.get_all_contact_groups(self.request.app['dbcon']),
+        }
+        return context
+
+
+class DisplayContactGroupView(web.View):
+    @aiohttp_jinja2.template('display_contact_group.html')
+    async def get(self) -> Dict[str, Any]:
+        dbcon = self.request.app['dbcon']
+        contact_group = await contact.get_contact_group(dbcon, int(self.request.match_info['id']))
+        if not contact_group:
+            raise errors.NotFound()
+        cc = await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
+        print('CCCCCCCCCC', cc)
+        context = {
+            'section': 'contacts',
+            'subsection': 'groups',
+            'contact_group': contact_group,
+            'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
         }
         return context

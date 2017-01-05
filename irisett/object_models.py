@@ -21,3 +21,21 @@ class ActiveMonitorAlert:
     end_ts = attr.ib()
     alert_msg = attr.ib()
     model_type = attr.ib(init=False, default='active_monitor_alert')
+
+
+@attr.s
+class Contact:
+    id = attr.ib()
+    name = attr.ib()
+    email = attr.ib()
+    phone = attr.ib()
+    active = attr.ib()
+    model_type = attr.ib(init=False, default='contact')
+
+
+@attr.s
+class ContactGroup:
+    id = attr.ib()
+    name = attr.ib()
+    active = attr.ib()
+    model_type = attr.ib(init=False, default='contact_group')
