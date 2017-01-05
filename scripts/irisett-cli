@@ -26,9 +26,16 @@ def parse_args():
     cmd.add_argument('-a', '--argument', action='append', help='key:value argument pairs (repeat as necessary)')
     cmd.set_defaults(func=update_active_monitor)
 
-    cmd = subparsers.add_parser('schedule-active-monitor', help='Schedule immediate check for an active monitor')
+    cmd = subparsers.add_parser('delete-active-monitor', help='Delete active monitor')
     cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
-    cmd.set_defaults(func=schedule_active_monitor)
+    cmd.set_defaults(func=delete_active_monitor)
+
+    cmd = subparsers.add_parser('get-active-monitors', help='Get active monitors')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.add_argument('-g', '--monitor-group-id', required=False, help='Monitor group id')
+    cmd.set_defaults(func=get_active_monitors)
 
     cmd = subparsers.add_parser('enable-active-monitor-checks', help='Enable checks for an active monitor')
     cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
@@ -46,21 +53,35 @@ def parse_args():
     cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
     cmd.set_defaults(func=disable_active_monitor_alerts)
 
+    cmd = subparsers.add_parser('add-active-monitor-contact', help='Add active monitor contact')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=add_active_monitor_contact)
+
+    cmd = subparsers.add_parser('delete-active-monitor-contact', help='Delete active monitor contact')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=delete_active_monitor_contact)
+
+    cmd = subparsers.add_parser('get-active-monitor-contacts', help='Get contact for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.add_argument('--all', default=False, action='store_true', help='Include all contacts, from monitor groups etc.')
+    cmd.set_defaults(func=get_active_monitor_contacts)
+
+    cmd = subparsers.add_parser('get-active-monitor-alerts', help='Get active monitor alerts')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_active_monitor_alerts)
+
+    cmd = subparsers.add_parser('schedule-active-monitor', help='Schedule immediate check for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=schedule_active_monitor)
+
     cmd = subparsers.add_parser('active-monitor-test-notification',
                                 help='Test sending alert notifications for an active monitor')
     cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
     cmd.set_defaults(func=active_monitor_test_notification)
-
-    cmd = subparsers.add_parser('delete-active-monitor', help='Delete active monitor')
-    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
-    cmd.set_defaults(func=delete_active_monitor)
-
-    cmd = subparsers.add_parser('get-active-monitors', help='Get active monitors')
-    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
-    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
-    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
-    cmd.add_argument('-g', '--monitor-group-id', required=False, help='Monitor group id')
-    cmd.set_defaults(func=get_active_monitors)
 
     cmd = subparsers.add_parser('get-active-monitor-defs', help='List active monitor definitions')
     cmd.add_argument('-i', '--def-id', type=int, required=False, help='Monitor defintion id')
@@ -168,61 +189,6 @@ def parse_args():
     cmd.add_argument('-i', '--contact-group-id', type=int, required=True, help='Contact group id')
     cmd.set_defaults(func=get_contact_group_contacts)
 
-    cmd = subparsers.add_parser('set-metadata', help='Set metadata for an object')
-    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
-    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
-    cmd.add_argument('-d', '--metadict', action='append', help='key:value argument pairs (repeat as necessary)')
-    cmd.set_defaults(func=add_metadata)
-
-    cmd = subparsers.add_parser('delete-metadata', help='Delete metadata for an object')
-    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
-    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
-    cmd.add_argument('-k', '--key', action='append', help='keys to remove (leave blank to remove all keys)')
-    cmd.set_defaults(func=delete_metadata)
-
-    cmd = subparsers.add_parser('add-active-monitor-contact', help='Add active monitor contact')
-    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
-    cmd.add_argument('--contact-id', required=True, help='Contact id')
-    cmd.set_defaults(func=add_active_monitor_contact)
-
-    cmd = subparsers.add_parser('delete-active-monitor-contact', help='Delete active monitor contact')
-    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
-    cmd.add_argument('--contact-id', required=True, help='Contact id')
-    cmd.set_defaults(func=delete_active_monitor_contact)
-
-    cmd = subparsers.add_parser('get-active-monitor-contacts', help='Get contact for an active monitor')
-    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
-    cmd.add_argument('--all', default=False, action='store_true', help='Include all contacts, from monitor groups etc.')
-    cmd.set_defaults(func=get_active_monitor_contacts)
-
-    cmd = subparsers.add_parser('get-active-monitor-alerts', help='Get active monitor alerts')
-    cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
-    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
-    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
-    cmd.set_defaults(func=get_active_monitor_alerts)
-
-    cmd = subparsers.add_parser('set-bindata', help='Set bindata for an object')
-    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
-    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
-    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
-    cmd.add_argument('-v', '--value', required=True, help='Bindata value')
-    cmd.set_defaults(func=add_bindata)
-
-    cmd = subparsers.add_parser('delete-bindata', help='Delete bindata for an object')
-    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
-    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
-    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
-    cmd.set_defaults(func=delete_bindata)
-
-    cmd = subparsers.add_parser('get-bindata', help='Get bindata for an object')
-    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
-    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
-    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
-    cmd.set_defaults(func=get_bindata)
-
-    cmd = subparsers.add_parser('get-stats', help='Get statistics for a irisett server')
-    cmd.set_defaults(func=get_stats)
-
     cmd = subparsers.add_parser('get-monitor-groups', help='Get monitor groups')
     cmd.add_argument('-i', '--monitor-group-id', type=int, required=False, help='Monitor group id')
     cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
@@ -276,6 +242,40 @@ def parse_args():
     cmd.add_argument('--monitor-group-id', required=True, help='Monitor group id')
     cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
     cmd.set_defaults(func=delete_monitor_group_contact_group)
+
+    cmd = subparsers.add_parser('set-metadata', help='Set metadata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-d', '--metadict', action='append', help='key:value argument pairs (repeat as necessary)')
+    cmd.set_defaults(func=add_metadata)
+
+    cmd = subparsers.add_parser('delete-metadata', help='Delete metadata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', action='append', help='keys to remove (leave blank to remove all keys)')
+    cmd.set_defaults(func=delete_metadata)
+
+    cmd = subparsers.add_parser('set-bindata', help='Set bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.add_argument('-v', '--value', required=True, help='Bindata value')
+    cmd.set_defaults(func=add_bindata)
+
+    cmd = subparsers.add_parser('delete-bindata', help='Delete bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.set_defaults(func=delete_bindata)
+
+    cmd = subparsers.add_parser('get-bindata', help='Get bindata for an object')
+    cmd.add_argument('-t', '--object-type', required=True, help='Object type')
+    cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
+    cmd.add_argument('-k', '--key', required=True, help='Bindata key')
+    cmd.set_defaults(func=get_bindata)
+
+    cmd = subparsers.add_parser('get-stats', help='Get statistics for a irisett server')
+    cmd.set_defaults(func=get_stats)
 
     args = parser.parse_args()
     return parser, args
