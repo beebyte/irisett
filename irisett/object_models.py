@@ -14,16 +14,6 @@ from attr import asdict
 
 
 @attr.s
-class ActiveMonitorAlert:
-    id = attr.ib()
-    monitor_id = attr.ib()
-    start_ts = attr.ib()
-    end_ts = attr.ib()
-    alert_msg = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_alert')
-
-
-@attr.s
 class Contact:
     id = attr.ib()
     name = attr.ib()
@@ -42,14 +32,6 @@ class ContactGroup:
 
 
 @attr.s
-class MonitorGroup:
-    id = attr.ib()
-    parent_id = attr.ib()
-    name = attr.ib()
-    model_type = attr.ib(init=False, default='monitor_group')
-
-
-@attr.s
 class ActiveMonitor:
     id = attr.ib()
     def_id = attr.ib()
@@ -61,3 +43,72 @@ class ActiveMonitor:
     checks_enabled = attr.ib()
     alerts_enabled = attr.ib()
     model_type = attr.ib(init=False, default='active_monitor')
+
+
+@attr.s
+class ActiveMonitorArg:
+    id = attr.ib()
+    monitor_id = attr.ib()
+    name = attr.ib()
+    value = attr.ib()
+    model_type = attr.ib(init=False, default='active_monitor_arg')
+
+
+@attr.s
+class ActiveMonitorAlert:
+    id = attr.ib()
+    monitor_id = attr.ib()
+    start_ts = attr.ib()
+    end_ts = attr.ib()
+    alert_msg = attr.ib()
+    model_type = attr.ib(init=False, default='active_monitor_alert')
+
+
+@attr.s
+class ActiveMonitorDef:
+    id = attr.ib()
+    name = attr.ib()
+    description = attr.ib()
+    active = attr.ib()
+    cmdline_filename = attr.ib()
+    cmdline_args_tmpl = attr.ib()
+    description_tmpl = attr.ib()
+    model_type = attr.ib(init=False, default='active_monitor_arg')
+
+
+@attr.s
+class ActiveMonitorDefArg:
+    id = attr.ib()
+    active_monitor_def_id = attr.ib()
+    name = attr.ib()
+    display_name = attr.ib()
+    description = attr.ib()
+    required = attr.ib()
+    default_value = attr.ib()
+    model_type = attr.ib(init=False, default='active_monitor_def_arg')
+
+
+@attr.s
+class ObjectMetadata:
+    object_type = attr.ib()
+    object_id = attr.ib()
+    key = attr.ib()
+    value = attr.ib()
+    model_type = attr.ib(init=False, default='object_metadata')
+
+
+@attr.s
+class ObjectBindata:
+    object_type = attr.ib()
+    object_id = attr.ib()
+    key = attr.ib()
+    value = attr.ib()
+    model_type = attr.ib(init=False, default='object_bindata')
+
+
+@attr.s
+class MonitorGroup:
+    id = attr.ib()
+    parent_id = attr.ib()
+    name = attr.ib()
+    model_type = attr.ib(init=False, default='monitor_group')
