@@ -587,7 +587,7 @@ class ActiveMonitor(log.LoggingMixin):
             self.log_debug('skipping alert notifications, disabled')
             return
         contacts = await contact.get_contact_dict_for_active_monitor(
-            self.manager.dbcon, self)
+            self.manager.dbcon, self.id)
         metadata = await self.get_metadata()
         tmpl_data = {}  # type: Dict[str, Any]
         for key, value in metadata.items():

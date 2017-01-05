@@ -9,6 +9,7 @@ from irisett import (
     bindata,
     stats,
     utils,
+    monitor_group,
 )
 from irisett.webapi import (
     errors,
@@ -24,11 +25,22 @@ from irisett.contact import (
     create_contact,
     update_contact,
     delete_contact,
-    contact_exists,
     add_contact_to_active_monitor,
     delete_contact_from_active_monitor,
     get_contacts_for_active_monitor,
     set_active_monitor_contacts,
+    get_all_contacts_for_active_monitor,
+    create_contact_group,
+    update_contact_group,
+    delete_contact_group,
+    add_contact_to_contact_group,
+    delete_contact_from_contact_group,
+    set_contact_group_contacts,
+    get_contacts_for_contact_group,
+    get_contact_groups_for_active_monitor,
+    add_contact_group_to_active_monitor,
+    delete_contact_group_from_active_monitor,
+    set_active_monitor_contact_groups,
 )
 from irisett.webapi.require import (
     require_int,
@@ -64,6 +76,15 @@ class ActiveMonitorView(web.View):
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
             q_args = (meta_key, meta_value)
+            res = await self.request.app['dbcon'].fetch_all(q, q_args)
+            ids = [n[0] for n in res]
+        elif 'monitor_group_id' in self.request.rel_url.query:
+            q = """select monitors.id from active_monitors as monitors
+                left join monitor_group_active_monitors on monitor_group_active_monitors.active_monitor_id=monitors.id
+                left join monitor_groups on monitor_groups.id=monitor_group_active_monitors.monitor_group_id
+                where monitor_groups.id=%s"""
+            monitor_group_id = require_str(get_request_param(self.request, 'monitor_group_id'))
+            q_args = (monitor_group_id,)
             res = await self.request.app['dbcon'].fetch_all(q, q_args)
             ids = [n[0] for n in res]
         else:
@@ -263,7 +284,10 @@ class ActiveMonitorAlertView(web.View):
 class ActiveMonitorContactView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
-        ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        if 'include_all' in self.request.rel_url.query:
+            ret = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        else:
+            ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         return web.json_response(ret)
 
     async def post(self) -> web.Response:
@@ -287,6 +311,37 @@ class ActiveMonitorContactView(web.View):
         await set_active_monitor_contacts(
             self.request.app['dbcon'],
             cast(List[int], require_list(request_data.get('contact_ids'), int)),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+
+class ActiveMonitorContactGroupView(web.View):
+    async def get(self) -> web.Response:
+        monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
+        ret = await get_contact_groups_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        return web.json_response(ret)
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await add_contact_group_to_active_monitor(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await delete_contact_group_from_active_monitor(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        await set_active_monitor_contact_groups(
+            self.request.app['dbcon'],
+            cast(List[int], require_list(request_data.get('contact_group_ids'), int)),
             cast(int, require_int(request_data.get('monitor_id'))))
         return web.json_response(True)
 
@@ -492,19 +547,250 @@ class ContactView(web.View):
         request_data = await self.request.json()
         contact_id = cast(int, require_int(get_request_param(self.request, 'id')))
         dbcon = self.request.app['dbcon']
-        exists = await contact_exists(dbcon, contact_id)
-        if not exists:
-            raise errors.NotFound()
         await update_contact(dbcon, contact_id, request_data)
         return web.json_response(True)
 
     async def delete(self) -> web.Response:
         contact_id = cast(int, require_int(get_request_param(self.request, 'id')))
         dbcon = self.request.app['dbcon']
-        exists = await contact_exists(dbcon, contact_id)
+        await delete_contact(dbcon, contact_id)
+        return web.json_response(True)
+
+
+class ContactGroupView(web.View):
+    async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
+        # noinspection PyUnusedLocal
+        q_args = ()  # type: Tuple
+        if 'id' in self.request.rel_url.query:
+            contact_group_id = require_int(get_request_param(self.request, 'id'))
+            q = """select id, name, active from contact_groups where id=%s"""
+            q_args = (contact_group_id,)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, contact_groups
+                where contact_groups.id=%s and meta.object_type="contact_group" and meta.object_id=contact_groups.id"""
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            q = """select c.id, c.name, c.active
+                from contact_groups as c, object_metadata as meta
+                where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=c.id"""
+            q_args = (meta_key, meta_value)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select m2.object_id, m2.key, m2.value
+                        from object_metadata as m1
+                        left join contact_groups on contact_groups.id=m1.object_id
+                        left join object_metadata as m2 on m2.object_id=contact_groups.id
+                        where m1.key=%s and m1.value=%s and m2.object_type="contact_group"
+            """
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        else:
+            q = """select id, name, active from contact_groups"""
+            rows = await dbcon.fetch_all(q)
+            meta_q = '''select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, contact_groups
+                where meta.object_id=contact_groups.id and meta.object_type="contact_group"'''
+            meta_rows = await dbcon.fetch_all(meta_q)
+        contacts = {}
+        for id, name, active in rows:
+            contact = {
+                'id': id,
+                'name': name,
+                'active': active,
+                'metadata': {}
+            }
+            contacts[id] = contact
+        for id, key, value in meta_rows:
+            if id in contacts:
+                contacts[id]['metadata'][key] = value
+        return web.json_response(list(contacts.values()))
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        contact_group_id = await create_contact_group(
+            self.request.app['dbcon'],
+            require_str(request_data.get('name', None), allow_none=False),
+            cast(bool, require_bool(request_data.get('active', True)))
+        )
+        return web.json_response(contact_group_id)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        await update_contact_group(dbcon, contact_group_id, request_data)
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        await delete_contact_group(dbcon, contact_group_id)
+        return web.json_response(True)
+
+
+class ContactGroupContactView(web.View):
+    async def get(self) -> web.Response:
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'contact_group_id')))
+        ret = await get_contacts_for_contact_group(self.request.app['dbcon'], contact_group_id)
+        return web.json_response(ret)
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await add_contact_to_contact_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await delete_contact_from_contact_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        await set_contact_group_contacts(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(List[int], require_list(request_data.get('contact_ids'), int)))
+        return web.json_response(True)
+
+
+class MonitorGroupView(web.View):
+    async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
+        # noinspection PyUnusedLocal
+        q_args = ()  # type: Tuple
+        if 'id' in self.request.rel_url.query:
+            monitor_group_id = require_int(get_request_param(self.request, 'id'))
+            q = """select id, parent_id, name from monitor_groups where id=%s"""
+            q_args = (monitor_group_id,)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, monitor_groups
+                where monitor_groups.id=%s and meta.object_type="monitor_group" and meta.object_id=monitor_group.id"""
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            q = """select mg.id, mg.parent_id, mg.name
+                from monitor_groups as mg, object_metadata as meta
+                where meta.key=%s and meta.value=%s and meta.object_type="monitor_group" and meta.object_id=mg.id"""
+            q_args = (meta_key, meta_value)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select m2.object_id, m2.key, m2.value
+                        from object_metadata as m1
+                        left join monitor_groups on monitor_groups.id=m1.object_id
+                        left join object_metadata as m2 on m2.object_id=contacts.id
+                        where m1.key=%s and m1.value=%s and m2.object_type="monitor_group"
+            """
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        else:
+            q = """select id, parent_id, name from monitor_groups"""
+            rows = await dbcon.fetch_all(q)
+            meta_q = '''select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, monitor_groups
+                where meta.object_id=monitor_groups.id and meta.object_type="monitor_group"'''
+            meta_rows = await dbcon.fetch_all(meta_q)
+        monitor_groups = {}
+        for id, parent_id, name in rows:
+            monitor_group = {
+                'id': id,
+                'parent_id': parent_id,
+                'name': name,
+                'metadata': {}
+            }
+            monitor_groups[id] = monitor_group
+        for id, key, value in meta_rows:
+            if id in monitor_groups:
+                monitor_groups[id]['metadata'][key] = value
+        return web.json_response(list(monitor_groups.values()))
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        monitor_group_id = await monitor_group.create_monitor_group(
+            self.request.app['dbcon'],
+            require_int(request_data.get('parent_id', None), allow_none=True),
+            require_str(request_data.get('name', None), allow_none=True)
+        )
+        return web.json_response(monitor_group_id)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        monitor_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        exists = await monitor_group.monitor_group_exists(dbcon, monitor_group_id)
         if not exists:
             raise errors.NotFound()
-        await delete_contact(dbcon, contact_id)
+        await monitor_group.update_monitor_group(dbcon, monitor_group_id, request_data)
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        monitor_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        exists = await monitor_group.monitor_group_exists(dbcon, monitor_group_id)
+        if not exists:
+            raise errors.NotFound()
+        await monitor_group.delete_monitor_group(dbcon, monitor_group_id)
+        return web.json_response(True)
+
+
+class MonitorGroupActiveMonitorView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_active_monitor_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_active_monitor_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+
+class MonitorGroupContactView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_contact_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_contact_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+
+class MonitorGroupContactGroupView(web.View):
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.add_contact_group_to_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_group_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await monitor_group.delete_contact_group_from_monitor_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('monitor_group_id'))),
+            cast(int, require_int(request_data.get('contact_group_id'))))
         return web.json_response(True)
 
 
