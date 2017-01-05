@@ -15,7 +15,7 @@
                 <td><a href="/active_monitor/{{ alert.monitor_id }}/">{{ alert.monitor.get_description() }}</a></td>
                 <td>{{ alert.start_ts|timestamp }}</td>
                 <td>{{ alert.end_ts|timestamp }}</td>
-                <td>{{ alert.alert_msg[:100] }} ...</td>
+                <td>{{ alert.alert_msg[:100] }} [...]</td>
             </tr>
         {% endfor %}
     </table>
