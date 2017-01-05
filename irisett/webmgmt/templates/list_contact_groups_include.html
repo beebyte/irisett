@@ -1,0 +1,14 @@
+<table class="table table-striped">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Active</th>
+    </tr>
+    {% for contact_group in contact_groups %}
+        <tr>
+            <td><a href="/contact/group/{{ contact_group.id }}/">{{ contact_group.id }}</a></td>
+            <td>{{ contact_group.name }}</td>
+            <td>{{ contact_group.active }}</td>
+        </tr>
+    {% endfor %}
+</table>

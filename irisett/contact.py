@@ -10,8 +10,11 @@ from the database each time an alert is sent.
 """
 
 from typing import Dict, Iterable, Optional, Any
-from irisett import errors
 from irisett.sql import DBConnection
+from irisett import (
+    errors,
+    object_models,
+)
 from irisett.object_exists import (
     contact_exists,
     active_monitor_exists,
@@ -414,3 +417,22 @@ async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: 
             'active': active
         })
     return contacts
+
+
+async def get_all_contact_groups(dbcon: DBConnection) -> Iterable[object_models.ContactGroup]:
+    q = """select id, name, active from contact_groups"""
+    contact_groups = [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q)]
+    return contact_groups
+
+
+async def get_contact_group(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
+    """Get a single contact if it exists.
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select id, name, active from contact_groups where id=%s"""
+    row = await dbcon.fetch_row(q, (id,))
+    contact = None
+    if row:
+        contact = object_models.ContactGroup(*row)
+    return contact

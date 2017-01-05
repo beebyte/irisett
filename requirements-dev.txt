@@ -23,3 +23,4 @@ pytest-asyncio==0.5.0
 requests==2.12.3
 typed-ast==0.6.1
 yarl==0.8.1
+attrs==16.3.0

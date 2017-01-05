@@ -5,9 +5,12 @@ as a cosmetic feature, but also to connect multiple monitors to contacts
 without setting the contact(s) for each monitor.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterable
 from irisett.sql import DBConnection
-from irisett import errors
+from irisett import (
+    errors,
+    object_models,
+)
 from irisett.object_exists import (
     monitor_group_exists,
     contact_exists,
@@ -130,3 +133,43 @@ async def delete_contact_group_from_monitor_group(dbcon: DBConnection, monitor_g
     q = """delete from monitor_group_contact_groups where monitor_group_id=%s and contact_group_id=%s"""
     q_args = (monitor_group_id, contact_group_id)
     await dbcon.operation(q, q_args)
+
+
+async def get_all_monitor_groups(dbcon: DBConnection) -> Iterable[object_models.MonitorGroup]:
+    q = """select id, parent_id, name from monitor_groups"""
+    ret = [object_models.MonitorGroup(*row) for row in await dbcon.fetch_all(q)]
+    return ret
+
+
+async def get_monitor_group(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
+    q = """select id, parent_id, name from monitor_groups where id=%s"""
+    row = await dbcon.fetch_row(q, (id,))
+    ret = None
+    if row:
+        ret = object_models.MonitorGroup(*row)
+    return ret
+
+
+async def get_contacts_for_monitor_group(dbcon: DBConnection, id: int) -> Iterable[object_models.Contact]:
+    q = """select contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
+            from contacts, monitor_group_contacts
+            where contacts.id=monitor_group_contacts.contact_id
+            and monitor_group_contacts.monitor_group_id=%s"""
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, (id,))]
+
+
+async def get_contact_groups_for_monitor_group(dbcon: DBConnection, id: int) -> Iterable[object_models.ContactGroup]:
+    q = """select cg.id, cg.name, cg.active
+            from contact_groups as cg, monitor_group_contact_groups
+            where cg.id=monitor_group_contact_groups.contact_group_id
+            and monitor_group_contact_groups.monitor_group_id=%s"""
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, (id,))]
+
+
+async def get_active_monitors_for_monitor_group(dbcon: DBConnection, id: int) -> Iterable[object_models.ActiveMonitor]:
+    q = """select mon.id, mon.def_id, mon.state, mon.state_ts, mon.msg, mon.alert_id, mon.deleted,
+            mon.checks_enabled, mon.alerts_enabled
+            from active_monitors as mon, monitor_group_active_monitors
+            where mon.id=monitor_group_active_monitors.active_monitor_id
+            and monitor_group_active_monitors.monitor_group_id=%s"""
+    return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q, (id,))]

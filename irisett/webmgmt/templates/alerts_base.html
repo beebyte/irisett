@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block submenus %}
+    <div class="submenu">
+        <a {% if subsection == "active_alerts" %}class="menu-active" {% endif %}href="/alerts/">Active alerts</a> |
+        <a {% if subsection == "alert_history" %}class="menu-active" {% endif %}href="/alerts/history/">Alert history</a>
+    </div>
+{% endblock %}

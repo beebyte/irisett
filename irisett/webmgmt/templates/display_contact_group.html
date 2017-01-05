@@ -1,0 +1,17 @@
+{% extends "contacts_base.html" %}
+{% block body %}
+    <h1 class="table-heading">Contact group</h1>
+    <table class="table kvp-table">
+        <tr>
+            <td>Name</td>
+            <td>{{ contact_group.name }}</td>
+        </tr>
+        <tr>
+            <td>Active</td>
+            <td>{{ contact_group.active }}</td>
+        </tr>
+    </table>
+    <br/>
+    <h2 class="table-heading">Contacts in group</h2>
+    {% include "list_contacts_include.html" %}
+{% endblock %}

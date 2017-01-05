@@ -1,5 +1,9 @@
 {% extends "base.html" %}
 {% block body %}
+    <div class="action-menu">
+        <a href="/active_monitor/{{ monitor.id }}/run/">Schedule monitor now</a>
+        <a href="/active_monitor/{{ monitor.id }}/test-notification/">Send test notification</a>
+    </div>
     <h1 class="table-heading">Active monitor</h1>
     <table class="table kvp-table">
         <tr>
@@ -13,6 +17,10 @@
         <tr>
             <td>Last check</td>
             <td>{{ monitor.last_check|timestamp }}</td>
+        </tr>
+        <tr>
+            <td>Check running right now</td>
+            <td>{{ monitor.monitoring }}</td>
         </tr>
         <tr>
             <td>Monitor definition</td>
@@ -41,6 +49,10 @@
         <tr>
             <td>Next scheduled job</td>
             <td>{{ monitor.scheduled_job_ts|timestamp }}</td>
+        </tr>
+        <tr>
+            <td>Monitor command</td>
+            <td>{{ monitor.monitor_def.cmdline_filename }} {{ monitor.get_expanded_args() }}</td>
         </tr>
         <tr>
             <td>Display events</td>
@@ -72,12 +84,6 @@
     {% if contacts %}
         <br>
         <h2 class="table-heading">Contacts</h2>
-        <table class="table kvp-table">
-            {% for contact in contacts %}
-                <tr>
-                    <td><a href="/contact/{{ contact.id }}/">{{ contact.name }}</a></td>
-                </tr>
-            {% endfor %}
-        </table>
+        {% include "list_contacts_include.html" %}
     {% endif %}
 {% endblock %}
