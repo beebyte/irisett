@@ -16,6 +16,9 @@
     </div>
     {% block submenus %}{% endblock %}
 </div>
+{% if notification_msg %}
+    <div class="notification-bar">{{ notification_msg }}</div>
+{% endif %}
 {% block body %}{% endblock %}
 {% block script %}{% endblock %}
 </body>

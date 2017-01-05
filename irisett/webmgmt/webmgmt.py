@@ -34,6 +34,7 @@ def setup_routes(app: web.Application):
     r('GET', '/events/websocket/', view.events_websocket_handler)
     r('*', '/active_monitor/', view.ListActiveMonitorsView)
     r('*', '/active_monitor/{id}/', view.DisplayActiveMonitorView)
+    r('GET', '/active_monitor/{id}/run/', view.run_active_monitor_view)
     r('*', '/active_monitor_def/', view.ListActiveMonitorDefsView)
     r('*', '/active_monitor_def/{id}/', view.DisplayActiveMonitorDefView)
     r('*', '/contact/', view.ListContactsView)

@@ -116,11 +116,21 @@ class DisplayActiveMonitorView(web.View):
         monitor = am_manager.monitors[monitor_id]
         context = {
             'section': 'active_monitors',
+            'notification_msg': self.request.rel_url.query.get('notification_msg'),
             'monitor': monitor,
             'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
             'contacts': await contact.get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
         }
         return context
+
+
+async def run_active_monitor_view(request):
+    """GET view to run an active monitor immediately."""
+    monitor_id = int(request.match_info['id'])
+    am_manager = request.app['active_monitor_manager']
+    monitor = am_manager.monitors[monitor_id]
+    monitor.schedule_immediately()
+    return web.HTTPFound('/active_monitor/%s/?notification_msg=Monitor job scheduled' % monitor_id)
 
 
 def parse_active_monitor_def_row(row):

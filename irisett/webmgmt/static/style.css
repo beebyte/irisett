@@ -96,3 +96,31 @@ h1.table-heading {
 h2.table-heading {
     font-size: 20px;
 }
+
+.action-menu {
+    background-color: #f0f0f0;
+    width: auto;
+    padding: 15px;
+    margin-bottom: 5px;
+}
+
+.action-menu a {
+    border: 1px solid black;
+    margin: 3px;
+    padding: 7px;
+    background-color: #ffffff;
+    border-radius: 5px;
+    text-decoration: none;
+    color: black;
+}
+
+.action-menu a:hover {
+    background-color: #f3f3f3;
+}
+
+.notification-bar {
+    background-color: palegreen;
+    width: auto;
+    padding: 12px;
+    margin-bottom: 10px;
+}
