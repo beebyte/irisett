@@ -5,7 +5,10 @@
 </head>
 <body>
 <div class="menu">
-    <a href="/">Index</a> | <a href="/alerts/">Alerts</a> | <a href="/active_monitor/">Active monitors</a> | <a href="/active_monitor_def/">Active monitor definitions</a> | <a href="/contact/">Contacts</a> | <a href="/statistics/">Statistics</a> | <a href="/events/">Events</a><br/>
+    <div class="submenu">
+        <a href="/">Index</a> | <a href="/alerts/">Alerts</a> | <a href="/active_monitor/">Active monitors</a> | <a href="/active_monitor_def/">Active monitor definitions</a> | <a href="/contact/">Contacts</a> | <a href="/statistics/">Statistics</a> | <a href="/events/">Events</a>
+    </div>
+    {% block submenus %}{% endblock %}
 </div>
 {% block body %}{% endblock %}
 {% block script %}{% endblock %}

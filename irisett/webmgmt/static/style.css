@@ -67,6 +67,10 @@ table.eventlog tr.warning {
     text-decoration: underline;
 }
 
+.submenu {
+    margin-bottom: 7px;
+}
+
 .kvp-table td:first-child {
     font-weight: bold;
 }

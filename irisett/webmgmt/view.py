@@ -1,6 +1,6 @@
 """Web views."""
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 from aiohttp import web
 # noinspection PyPackageRequirements
 import aiohttp_jinja2
@@ -10,6 +10,7 @@ from irisett import (
     stats,
     contact,
     log,
+    object_models,
 )
 
 from irisett.webmgmt import (
@@ -34,8 +35,8 @@ class StatisticsView(web.View):
         return context
 
 
-class AlertsView(web.View):
-    @aiohttp_jinja2.template('alerts.html')
+class ActiveAlertsView(web.View):
+    @aiohttp_jinja2.template('active_alerts.html')
     async def get(self) -> Dict[str, Any]:
         am_manager = self.request.app['active_monitor_manager']
         active_monitors = am_manager.monitors
@@ -43,6 +44,26 @@ class AlertsView(web.View):
             'alerting_active_monitors': [m for m in active_monitors.values() if m.state == 'DOWN']
         }
         return context
+
+
+class AlertHistoryView(web.View):
+    @aiohttp_jinja2.template('alert_history.html')
+    async def get(self) -> Dict[str, Any]:
+        alerts = await self._get_active_monitor_alerts()
+        context = {
+            'alerts': alerts,
+        }
+        return context
+
+    async def _get_active_monitor_alerts(self) -> List[object_models.ActiveMonitorAlert]:
+        am_manager = self.request.app['active_monitor_manager']
+        q = """select id, monitor_id, start_ts, end_ts, alert_msg from active_monitor_alerts order by start_ts desc"""
+        alerts = []  # type: List[object_models.ActiveMonitorAlert]
+        for row in await self.request.app['dbcon'].fetch_all(q):
+            alert = object_models.ActiveMonitorAlert(*row)
+            alert.monitor = am_manager.monitors.get(alert.monitor_id)
+            alerts.append(alert)
+        return alerts
 
 
 class EventsView(web.View):
