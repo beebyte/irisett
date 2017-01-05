@@ -17,7 +17,7 @@
                 <td>{{ monitor.state }}</td>
                 <td>{{ monitor.last_check|timestamp }}</td>
                 <td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
-                <td>{{ monitor.msg }}</td>
+                <td>{{ monitor.msg[:100] }} ...</td>
             </tr>
         {% endfor %}
     </table>
