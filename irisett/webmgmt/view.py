@@ -1,6 +1,7 @@
 """Web views."""
 
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
+import time
 from aiohttp import web
 # noinspection PyPackageRequirements
 import aiohttp_jinja2
@@ -133,6 +134,16 @@ async def run_active_monitor_view(request):
     monitor = am_manager.monitors[monitor_id]
     monitor.schedule_immediately()
     return web.HTTPFound('/active_monitor/%s/?notification_msg=Monitor job scheduled' % monitor_id)
+
+
+async def send_active_monitor_test_notification(request):
+    """GET view to send a test notification for an active monitor."""
+    monitor_id = int(request.match_info['id'])
+    am_manager = request.app['active_monitor_manager']
+    monitor = am_manager.monitors[monitor_id]
+    monitor.schedule_immediately()
+    await monitor.notify_state_change('UNKNOWN', abs(monitor.state_ts - (time.time() - monitor.state_ts)))
+    return web.HTTPFound('/active_monitor/%s/?notification_msg=Notification sent' % monitor_id)
 
 
 def parse_active_monitor_def_row(row):
