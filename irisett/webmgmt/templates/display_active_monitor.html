@@ -18,6 +18,10 @@
             <td>{{ monitor.last_check|timestamp }}</td>
         </tr>
         <tr>
+            <td>Check running right now</td>
+            <td>{{ monitor.monitoring }}</td>
+        </tr>
+        <tr>
             <td>Monitor definition</td>
             <td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
         </tr>
@@ -79,12 +83,6 @@
     {% if contacts %}
         <br>
         <h2 class="table-heading">Contacts</h2>
-        <table class="table kvp-table">
-            {% for contact in contacts %}
-                <tr>
-                    <td><a href="/contact/{{ contact.id }}/">{{ contact.name }}</a></td>
-                </tr>
-            {% endfor %}
-        </table>
+        {% include "list_contacts_include.html" %}
     {% endif %}
 {% endblock %}

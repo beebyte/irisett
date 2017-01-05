@@ -121,7 +121,7 @@ class DisplayActiveMonitorView(web.View):
             'notification_msg': self.request.rel_url.query.get('notification_msg'),
             'monitor': monitor,
             'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
-            'contacts': await contact.get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
+            'contacts': await contact.get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
         }
         return context
 
