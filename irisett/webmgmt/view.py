@@ -1,16 +1,18 @@
 """Web views."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 from aiohttp import web
 # noinspection PyPackageRequirements
 import aiohttp_jinja2
 
+from irisett.sql import DBConnection
 from irisett import (
     metadata,
     stats,
     contact,
     log,
     object_models,
+    monitor_group,
 )
 
 from irisett.webmgmt import (
@@ -231,6 +233,7 @@ class DisplayContactView(web.View):
         }
         return context
 
+
 class ListContactGroupsView(web.View):
     @aiohttp_jinja2.template('list_contact_groups.html')
     async def get(self) -> Dict[str, Any]:
@@ -249,8 +252,6 @@ class DisplayContactGroupView(web.View):
         contact_group = await contact.get_contact_group(dbcon, int(self.request.match_info['id']))
         if not contact_group:
             raise errors.NotFound()
-        cc = await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
-        print('CCCCCCCCCC', cc)
         context = {
             'section': 'contacts',
             'subsection': 'groups',
@@ -258,3 +259,36 @@ class DisplayContactGroupView(web.View):
             'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
         }
         return context
+
+
+class ListMonitorGroupsView(web.View):
+    @aiohttp_jinja2.template('list_monitor_groups.html')
+    async def get(self) -> Dict[str, Any]:
+        context = {
+            'section': 'monitor_group',
+            'monitor_groups': await monitor_group.get_all_monitor_groups(self.request.app['dbcon']),
+        }
+        return context
+
+
+class DisplayMonitorGroupView(web.View):
+    @aiohttp_jinja2.template('display_monitor_group.html')
+    async def get(self) -> Dict[str, Any]:
+        dbcon = self.request.app['dbcon']
+        mg = await monitor_group.get_monitor_group(dbcon, int(self.request.match_info['id']))
+        if not mg:
+            raise errors.NotFound()
+        context = {
+            'section': 'monitor_group',
+            'monitor_group': mg,
+            'contacts': await monitor_group.get_contacts_for_monitor_group(dbcon, mg.id),
+            'active_monitors': await self._get_active_monitors(dbcon, mg.id)
+        }
+        return context
+
+    async def _get_active_monitors(
+            self, dbcon: DBConnection, monitor_group_id: int) -> List[object_models.ActiveMonitor]:
+        sql_monitors = await monitor_group.get_active_monitors_for_monitor_group(dbcon, monitor_group_id)
+        am_manager = self.request.app['active_monitor_manager']
+        monitors = [am_manager.monitors[m.id] for m in sql_monitors if m.id in am_manager.monitors]
+        return monitors

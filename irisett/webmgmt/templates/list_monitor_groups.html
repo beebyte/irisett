@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block body %}
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Parent</th>
+        </tr>
+        {% for group in monitor_groups %}
+            <tr>
+                <td><a href="/monitor/group/{{ group.id }}/">{{ group.id }}</a></td>
+                <td>{{ group.name }}</td>
+                <td>{% if group.parent_id %}<a href="/monitor/group/{{ group.parent_id }}/">{{ group.parent_id }}</a>{% endif %}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

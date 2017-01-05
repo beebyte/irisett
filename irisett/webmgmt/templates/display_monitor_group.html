@@ -1,0 +1,16 @@
+{% extends "contacts_base.html" %}
+{% block body %}
+    <h1 class="table-heading">Monitor group</h1>
+    <table class="table kvp-table">
+        <tr>
+            <td>Name</td>
+            <td>{{ monitor_group.name }}</td>
+        </tr>
+    </table>
+    <br/>
+    <h2 class="table-heading">Active monitors in group</h2>
+    {% include "list_active_monitors_include.html" %}
+    <br/>
+    <h2 class="table-heading">Contacts in group</h2>
+    {% include "list_contacts_include.html" %}
+{% endblock %}

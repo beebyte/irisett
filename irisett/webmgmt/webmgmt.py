@@ -41,6 +41,8 @@ def setup_routes(app: web.Application):
     r('*', '/contact/group/', view.ListContactGroupsView)
     r('*', '/contact/group/{id}/', view.DisplayContactGroupView)
     r('*', '/contact/{id}/', view.DisplayContactView)
+    r('*', '/monitor/group/', view.ListMonitorGroupsView)
+    r('*', '/monitor/group/{id}/', view.DisplayMonitorGroupView)
     static_path = '%s/static' % (os.path.dirname(os.path.realpath(__file__)))
     app.router.add_static('/static/', path=static_path, name='static')
 

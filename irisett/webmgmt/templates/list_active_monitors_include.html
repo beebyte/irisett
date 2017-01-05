@@ -1,0 +1,21 @@
+<table class="table table-striped">
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>State</th>
+        <th>Last check</th>
+        <th>Monitor def</th>
+        <th>Message</th>
+    </tr>
+
+    {% for monitor in active_monitors %}
+        <tr>
+            <td><a href="/active_monitor/{{ monitor.id }}/">{{ monitor.id }}</a></td>
+            <td>{{ monitor.get_description() }}</td>
+            <td>{{ monitor.state }}</td>
+            <td>{{ monitor.last_check|timestamp }}</td>
+            <td><a href="/active_monitor_def/{{ monitor.monitor_def.id }}/">{{ monitor.monitor_def.name }}</a></td>
+            <td>{{ monitor.msg[:100] }} [...]</td>
+        </tr>
+    {% endfor %}
+</table>

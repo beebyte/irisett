@@ -39,3 +39,25 @@ class ContactGroup:
     name = attr.ib()
     active = attr.ib()
     model_type = attr.ib(init=False, default='contact_group')
+
+
+@attr.s
+class MonitorGroup:
+    id = attr.ib()
+    parent_id = attr.ib()
+    name = attr.ib()
+    model_type = attr.ib(init=False, default='monitor_group')
+
+
+@attr.s
+class ActiveMonitor:
+    id = attr.ib()
+    def_id = attr.ib()
+    state = attr.ib()
+    state_ts = attr.ib()
+    msg = attr.ib()
+    alert_id = attr.ib()
+    deleted = attr.ib()
+    checks_enabled = attr.ib()
+    alerts_enabled = attr.ib()
+    model_type = attr.ib(init=False, default='active_monitor')
