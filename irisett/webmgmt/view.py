@@ -22,7 +22,7 @@ from irisett.webmgmt import (
 class IndexView(web.View):
     @aiohttp_jinja2.template('index.html')
     async def get(self) -> Dict[str, Any]:
-        context = {}  # type: Dict[str, Any]
+        context = {'section': 'index'}  # type: Dict[str, Any]
         return context
 
 
@@ -30,6 +30,7 @@ class StatisticsView(web.View):
     @aiohttp_jinja2.template('statistics.html')
     async def get(self) -> Dict[str, Any]:
         context = {
+            'section': 'statistics',
             'stats': stats.get_stats(),
         }
         return context
@@ -41,6 +42,8 @@ class ActiveAlertsView(web.View):
         am_manager = self.request.app['active_monitor_manager']
         active_monitors = am_manager.monitors
         context = {
+            'section': 'alerts',
+            'subsection': 'active_alerts',
             'alerting_active_monitors': [m for m in active_monitors.values() if m.state == 'DOWN']
         }
         return context
@@ -51,6 +54,8 @@ class AlertHistoryView(web.View):
     async def get(self) -> Dict[str, Any]:
         alerts = await self._get_active_monitor_alerts()
         context = {
+            'section': 'alerts',
+            'subsection': 'alert_history',
             'alerts': alerts,
         }
         return context
@@ -75,7 +80,7 @@ class EventsView(web.View):
 
     @aiohttp_jinja2.template('events.html')
     async def get(self) -> Dict[str, Any]:
-        context = {}  # type: Dict[str, Any]
+        context = {'section': 'events'}  # type: Dict[str, Any]
         return context
 
 
@@ -97,6 +102,7 @@ class ListActiveMonitorsView(web.View):
         am_manager = self.request.app['active_monitor_manager']
         active_monitors = am_manager.monitors
         context = {
+            'section': 'active_monitors',
             'active_monitors': active_monitors.values(),
         }
         return context
@@ -109,6 +115,7 @@ class DisplayActiveMonitorView(web.View):
         am_manager = self.request.app['active_monitor_manager']
         monitor = am_manager.monitors[monitor_id]
         context = {
+            'section': 'active_monitors',
             'monitor': monitor,
             'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
             'contacts': await contact.get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
@@ -134,6 +141,7 @@ class ListActiveMonitorDefsView(web.View):
     @aiohttp_jinja2.template('list_active_monitor_defs.html')
     async def get(self) -> Dict[str, Any]:
         context = {
+            'section': 'active_monitor_defs',
             'monitor_defs': await self._get_active_monitor_defs(),
         }
         return context
@@ -157,6 +165,7 @@ class DisplayActiveMonitorDefView(web.View):
         monitor_def = am_manager.monitor_defs[monitor_def_id]
         sql_monitor_def = await self._get_active_monitor_def(monitor_def_id)
         context = {
+            'section': 'active_monitor_def',
             'monitor_def': monitor_def,
             'sql_monitor_def': sql_monitor_def,
         }
@@ -192,6 +201,7 @@ class ListContactsView(web.View):
     @aiohttp_jinja2.template('list_contacts.html')
     async def get(self) -> Dict[str, Any]:
         context = {
+            'section': 'contacts',
             'contacts': await contact.get_all_contacts(self.request.app['dbcon']),
         }
         return context
@@ -204,6 +214,7 @@ class DisplayContactView(web.View):
         if not c:
             raise errors.NotFound()
         context = {
+            'section': 'contacts',
             'contact': c,
         }
         return context

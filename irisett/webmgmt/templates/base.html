@@ -6,7 +6,13 @@
 <body>
 <div class="menu">
     <div class="submenu">
-        <a href="/">Index</a> | <a href="/alerts/">Alerts</a> | <a href="/active_monitor/">Active monitors</a> | <a href="/active_monitor_def/">Active monitor definitions</a> | <a href="/contact/">Contacts</a> | <a href="/statistics/">Statistics</a> | <a href="/events/">Events</a>
+        <a {% if section == "index" %}class="menu-active" {% endif %}href="/">Index</a> |
+        <a {% if section == "alerts" %}class="menu-active" {% endif %}href="/alerts/">Alerts</a> |
+        <a {% if section == "active_monitors" %}class="menu-active" {% endif %}href="/active_monitor/">Active monitors</a> |
+        <a {% if section == "active_monitor_defs" %}class="menu-active" {% endif %}href="/active_monitor_def/">Active monitor definitions</a> |
+        <a {% if section == "contacts" %}class="menu-active" {% endif %}href="/contact/">Contacts</a> |
+        <a {% if section == "statistics" %}class="menu-active" {% endif %}href="/statistics/">Statistics</a> |
+        <a {% if section == "events" %}class="menu-active" {% endif %}href="/events/">Events</a>
     </div>
     {% block submenus %}{% endblock %}
 </div>
