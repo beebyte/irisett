@@ -33,6 +33,10 @@ from irisett.contact import (
     create_contact_group,
     update_contact_group,
     delete_contact_group,
+    add_contact_to_contact_group,
+    delete_contact_from_contact_group,
+    set_contact_group_contacts,
+    get_contacts_for_contact_group,
 )
 from irisett.webapi.require import (
     require_int,
@@ -588,6 +592,37 @@ class ContactGroupView(web.View):
         contact_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
         dbcon = self.request.app['dbcon']
         await delete_contact_group(dbcon, contact_group_id)
+        return web.json_response(True)
+
+
+class ContactGroupContactView(web.View):
+    async def get(self) -> web.Response:
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'contact_group_id')))
+        ret = await get_contacts_for_contact_group(self.request.app['dbcon'], contact_group_id)
+        return web.json_response(ret)
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await add_contact_to_contact_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await delete_contact_from_contact_group(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('contact_id'))))
+        return web.json_response(True)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        await set_contact_group_contacts(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(List[int], require_list(request_data.get('contact_ids'), int)))
         return web.json_response(True)
 
 

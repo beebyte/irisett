@@ -154,6 +154,20 @@ def parse_args():
     cmd.add_argument('-i', '--contact-group-id', type=int, required=True, help='Contact group id')
     cmd.set_defaults(func=delete_contact_group)
 
+    cmd = subparsers.add_parser('add-contact-group-contact', help='Add contact group contact')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=add_contact_group_contact)
+
+    cmd = subparsers.add_parser('delete-contact-group-contact', help='Delete contact group contact')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.add_argument('--contact-id', required=True, help='Contact id')
+    cmd.set_defaults(func=delete_contact_group_contact)
+
+    cmd = subparsers.add_parser('get-contact-group-contacts', help='Get contacts for a contact group')
+    cmd.add_argument('-i', '--contact-group-id', type=int, required=True, help='Contact group id')
+    cmd.set_defaults(func=get_contact_group_contacts)
+
     cmd = subparsers.add_parser('set-metadata', help='Set metadata for an object')
     cmd.add_argument('-t', '--object-type', required=True, help='Object type')
     cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
@@ -609,6 +623,45 @@ def delete_contact_group(args):
     else:
         res = json.loads(request.content.decode('utf-8'))
         print(res)
+
+
+def add_contact_group_contact(args):
+    data = {
+        'contact_group_id': args.contact_group_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/contact_group_contact/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_contact_group_contact(args):
+    data = {
+        'contact_group_id': args.contact_group_id,
+        'contact_id': args.contact_id,
+    }
+    url = 'http://%s:%s/contact_group_contact/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_contact_group_contacts(args):
+    url = 'http://%s:%s/contact_group_contact/' % (args.host, args.port)
+    url = '%s?contact_group_id=%s' % (url, args.contact_group_id)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
 
 
 def add_metadata(args):

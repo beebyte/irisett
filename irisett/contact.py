@@ -290,3 +290,66 @@ async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because o
             'active': active
         }
     return contact
+
+
+async def add_contact_to_contact_group(dbcon: DBConnection, contact_group_id: int, contact_id: int):
+    """Connect a contact and a contact group."""
+    if not await contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact group does not exist')
+    if not await contact_exists(dbcon, contact_id):
+        raise errors.InvalidArguments('contact does not exist')
+    q = """replace into contact_group_contacts (contact_group_id, contact_id) values (%s, %s)"""
+    q_args = (contact_group_id, contact_id)
+    await dbcon.operation(q, q_args)
+
+
+async def delete_contact_from_contact_group(dbcon: DBConnection, contact_group_id: int, contact_id: int):
+    """Disconnect a contact and a contact_group."""
+    q = """delete from contact_group_contacts where contact_group_id=%s and contact_id=%s"""
+    q_args = (contact_group_id, contact_id)
+    await dbcon.operation(q, q_args)
+
+
+async def set_contact_group_contacts(dbcon: DBConnection,
+                                     contact_group_id: int, contact_ids: Iterable[int]):
+    """(Re-)set contacts for a contact group.
+
+    Delete existing contacts for a contact group and set the given new
+    contacts.
+    """
+
+    async def _run(cur):
+        q = """delete from contact_group_contacts where contact_group_id=%s"""
+        await cur.execute(q, (contact_group_id,))
+        for contact_id in contact_ids:
+            q = """insert into contact_group_contacts (contact_group_id, contact_id) values (%s, %s)"""
+            q_args = (contact_group_id, contact_id)
+            await cur.execute(q, q_args)
+
+    if not await contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact group does not exist')
+    await dbcon.transact(_run)
+
+
+async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[Dict[str, str]]:
+    """Get contacts for a contact group.
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select
+        contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
+        from contact_group_contacts, contacts
+        where contact_group_contacts.contact_group_id = %s
+        and contact_group_contacts.contact_id = contacts.id"""
+    q_args = (contact_group_id,)
+    rows = await dbcon.fetch_all(q, q_args)
+    contacts = []
+    for id, name, email, phone, active in rows:
+        contacts.append({
+            'id': id,
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'active': active
+        })
+    return contacts

@@ -31,6 +31,7 @@ def setup_routes(app: web.Application):
     app.router.add_route('*', '/monitor_group_contact_group/', view.MonitorGroupContactGroupView)
     app.router.add_route('*', '/contact/', view.ContactView)
     app.router.add_route('*', '/contact_group/', view.ContactGroupView)
+    app.router.add_route('*', '/contact_group_contact/', view.ContactGroupContactView)
     app.router.add_route('*', '/metadata/', view.MetadataView)
     app.router.add_route('*', '/bindata/', view.BindataView)
     app.router.add_route('*', '/statistics/', view.StatisticsView)
