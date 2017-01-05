@@ -46,6 +46,10 @@
             <td>{{ monitor.scheduled_job_ts|timestamp }}</td>
         </tr>
         <tr>
+            <td>Monitor command</td>
+            <td>{{ monitor.monitor_def.cmdline_filename }} {{ monitor.get_expanded_args() }}</td>
+        </tr>
+        <tr>
             <td>Display events</td>
             <td><a href="/events/?active_monitor_filter={{ monitor.id }}">Event log</a></td>
         </tr>
