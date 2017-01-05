@@ -43,14 +43,14 @@ async def update_contact(dbcon: DBConnection, contact_id: int, data: Dict[str, s
             q_args = (value, contact_id)
             await cur.execute(q, q_args)
 
-    if not contact_exists(dbcon, contact_id):
+    if not await contact_exists(dbcon, contact_id):
         raise errors.InvalidArguments('contact does not exist')
     await dbcon.transact(_run)
 
 
 async def delete_contact(dbcon: DBConnection, contact_id: int):
     """Remove a contact from the database."""
-    if not contact_exists(dbcon, contact_id):
+    if not await contact_exists(dbcon, contact_id):
         raise errors.InvalidArguments('contact does not exist')
     q = """delete from contacts where id=%s"""
     await dbcon.operation(q, (contact_id,))
@@ -78,14 +78,14 @@ async def update_contact_group(dbcon: DBConnection, contact_group_id: int, data:
             q_args = (value, contact_group_id)
             await cur.execute(q, q_args)
 
-    if not contact_group_exists(dbcon, contact_group_id):
+    if not await contact_group_exists(dbcon, contact_group_id):
         raise errors.InvalidArguments('contact group does not exist')
     await dbcon.transact(_run)
 
 
 async def delete_contact_group(dbcon: DBConnection, contact_group_id: int):
     """Remove a contact group from the database."""
-    if not contact_group_exists(dbcon, contact_group_id):
+    if not await contact_group_exists(dbcon, contact_group_id):
         raise errors.InvalidArguments('contact group does not exist')
     q = """delete from contact_groups where id=%s"""
     await dbcon.operation(q, (contact_group_id,))
