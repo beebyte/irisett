@@ -1,3 +1,7 @@
+.main {
+    margin: 20px;
+}
+
 a {
     font-size: 16px;
     text-decoration: underline;
