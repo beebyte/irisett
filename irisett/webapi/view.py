@@ -37,6 +37,10 @@ from irisett.contact import (
     delete_contact_from_contact_group,
     set_contact_group_contacts,
     get_contacts_for_contact_group,
+    get_contact_groups_for_active_monitor,
+    add_contact_group_to_active_monitor,
+    delete_contact_group_from_active_monitor,
+    set_active_monitor_contact_groups,
 )
 from irisett.webapi.require import (
     require_int,
@@ -307,6 +311,37 @@ class ActiveMonitorContactView(web.View):
         await set_active_monitor_contacts(
             self.request.app['dbcon'],
             cast(List[int], require_list(request_data.get('contact_ids'), int)),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+
+class ActiveMonitorContactGroupView(web.View):
+    async def get(self) -> web.Response:
+        monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
+        ret = await get_contact_groups_for_active_monitor(self.request.app['dbcon'], monitor_id)
+        return web.json_response(ret)
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        await add_contact_group_to_active_monitor(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        request_data = await self.request.json()
+        await delete_contact_group_from_active_monitor(
+            self.request.app['dbcon'],
+            cast(int, require_int(request_data.get('contact_group_id'))),
+            cast(int, require_int(request_data.get('monitor_id'))))
+        return web.json_response(True)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        await set_active_monitor_contact_groups(
+            self.request.app['dbcon'],
+            cast(List[int], require_list(request_data.get('contact_group_ids'), int)),
             cast(int, require_int(request_data.get('monitor_id'))))
         return web.json_response(True)
 

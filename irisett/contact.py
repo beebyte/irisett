@@ -252,6 +252,67 @@ async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) 
     return contacts
 
 
+async def add_contact_group_to_active_monitor(dbcon: DBConnection, contact_group_id: int, monitor_id: int):
+    """Connect a contact group and an active monitor."""
+    if not await active_monitor_exists(dbcon, monitor_id):
+        raise errors.InvalidArguments('monitor does not exist')
+    if not await contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact does not exist')
+    q = """replace into active_monitor_contact_groups (active_monitor_id, contact_group_id) values (%s, %s)"""
+    q_args = (monitor_id, contact_group_id)
+    await dbcon.operation(q, q_args)
+
+
+async def delete_contact_group_from_active_monitor(dbcon: DBConnection, contact_group_id: int, monitor_id: int):
+    """Disconnect a contact group and an active monitor."""
+    q = """delete from active_monitor_contact_groups where active_monitor_id=%s and contact_group_id=%s"""
+    q_args = (monitor_id, contact_group_id)
+    await dbcon.operation(q, q_args)
+
+
+async def set_active_monitor_contact_groups(dbcon: DBConnection,
+                                      contact_group_ids: Iterable[int], monitor_id: int):
+    """(Re-)set contact_groups for an active monitor.
+
+    Delete existing contact groups for an active monitor and set the given new
+    contact groups.
+    """
+
+    async def _run(cur):
+        q = """delete from active_monitor_contact_groups where active_monitor_id=%s"""
+        await cur.execute(q, (monitor_id,))
+        for contact_group_id in contact_group_ids:
+            q = """insert into active_monitor_contact_groups (active_monitor_id, contact_group_id) values (%s, %s)"""
+            q_args = (monitor_id, contact_group_id)
+            await cur.execute(q, q_args)
+
+    if not await active_monitor_exists(dbcon, monitor_id):
+        raise errors.InvalidArguments('monitor does not exist')
+    await dbcon.transact(_run)
+
+
+async def get_contact_groups_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, str]]:
+    """Get contact groups for an active monitor.
+
+    Return a list of dicts, one dict describing each contacts information.
+    """
+    q = """select
+        contact_groups.id, contact_groups.name, contact_groups.active
+        from active_monitor_contact_groups, contact_groups
+        where active_monitor_contact_groups.active_monitor_id = %s
+        and active_monitor_contact_groups.contact_group_id = contact_groups.id"""
+    q_args = (monitor_id,)
+    rows = await dbcon.fetch_all(q, q_args)
+    contacts = []
+    for id, name, active in rows:
+        contacts.append({
+            'id': id,
+            'name': name,
+            'active': active
+        })
+    return contacts
+
+
 async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
     """Get all contacts
 

@@ -68,6 +68,20 @@ def parse_args():
     cmd.add_argument('--all', default=False, action='store_true', help='Include all contacts, from monitor groups etc.')
     cmd.set_defaults(func=get_active_monitor_contacts)
 
+    cmd = subparsers.add_parser('add-active-monitor-contact-group', help='Add active monitor contact group')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.set_defaults(func=add_active_monitor_contact_group)
+
+    cmd = subparsers.add_parser('delete-active-monitor-contact-group', help='Delete active monitor contact group')
+    cmd.add_argument('--monitor-id', required=True, help='Monitor id')
+    cmd.add_argument('--contact-group-id', required=True, help='Contact group id')
+    cmd.set_defaults(func=delete_active_monitor_contact_group)
+
+    cmd = subparsers.add_parser('get-active-monitor-contact-groups', help='Get contact group for an active monitor')
+    cmd.add_argument('-i', '--monitor-id', type=int, required=True, help='Monitor id')
+    cmd.set_defaults(func=get_active_monitor_contact_groups)
+
     cmd = subparsers.add_parser('get-active-monitor-alerts', help='Get active monitor alerts')
     cmd.add_argument('-i', '--monitor-id', type=int, required=False, help='Monitor id')
     cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
@@ -756,6 +770,45 @@ def get_active_monitor_alerts(args):
     else:
         res = json.loads(request.content.decode('utf-8'))
         pprint(res)
+
+
+def get_active_monitor_contact_groups(args):
+    url = 'http://%s:%s/active_monitor_contact_group/' % (args.host, args.port)
+    url = '%s?monitor_id=%s' % (url, args.monitor_id)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_active_monitor_contact_group(args):
+    data = {
+        'monitor_id': args.monitor_id,
+        'contact_group_id': args.contact_group_id,
+    }
+    url = 'http://%s:%s/active_monitor_contact_group/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_active_monitor_contact_group(args):
+    data = {
+        'monitor_id': args.monitor_id,
+        'contact_group_id': args.contact_group_id,
+    }
+    url = 'http://%s:%s/active_monitor_contact_group/' % (args.host, args.port)
+    request = requests.delete(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
 
 
 def add_bindata(args):
