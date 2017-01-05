@@ -25,12 +25,14 @@ from irisett.contact import (
     create_contact,
     update_contact,
     delete_contact,
-    contact_exists,
     add_contact_to_active_monitor,
     delete_contact_from_active_monitor,
     get_contacts_for_active_monitor,
     set_active_monitor_contacts,
     get_all_contacts_for_active_monitor,
+    create_contact_group,
+    update_contact_group,
+    delete_contact_group,
 )
 from irisett.webapi.require import (
     require_int,
@@ -506,19 +508,86 @@ class ContactView(web.View):
         request_data = await self.request.json()
         contact_id = cast(int, require_int(get_request_param(self.request, 'id')))
         dbcon = self.request.app['dbcon']
-        exists = await contact_exists(dbcon, contact_id)
-        if not exists:
-            raise errors.NotFound()
         await update_contact(dbcon, contact_id, request_data)
         return web.json_response(True)
 
     async def delete(self) -> web.Response:
         contact_id = cast(int, require_int(get_request_param(self.request, 'id')))
         dbcon = self.request.app['dbcon']
-        exists = await contact_exists(dbcon, contact_id)
-        if not exists:
-            raise errors.NotFound()
         await delete_contact(dbcon, contact_id)
+        return web.json_response(True)
+
+
+class ContactGroupView(web.View):
+    async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
+        # noinspection PyUnusedLocal
+        q_args = ()  # type: Tuple
+        if 'id' in self.request.rel_url.query:
+            contact_group_id = require_int(get_request_param(self.request, 'id'))
+            q = """select id, name, active from contact_groups where id=%s"""
+            q_args = (contact_group_id,)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, contact_groups
+                where contact_groups.id=%s and meta.object_type="contact_group" and meta.object_id=contact_groups.id"""
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            q = """select c.id, c.name, c.active
+                from contact_groups as c, object_metadata as meta
+                where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=c.id"""
+            q_args = (meta_key, meta_value)
+            rows = await dbcon.fetch_all(q, q_args)
+            meta_q = """select m2.object_id, m2.key, m2.value
+                        from object_metadata as m1
+                        left join contact_groups on contact_groups.id=m1.object_id
+                        left join object_metadata as m2 on m2.object_id=contact_groups.id
+                        where m1.key=%s and m1.value=%s and m2.object_type="contact_group"
+            """
+            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+        else:
+            q = """select id, name, active from contact_groups"""
+            rows = await dbcon.fetch_all(q)
+            meta_q = '''select meta.object_id, meta.key, meta.value
+                from object_metadata as meta, contact_groups
+                where meta.object_id=contact_groups.id and meta.object_type="contact_group"'''
+            meta_rows = await dbcon.fetch_all(meta_q)
+        contacts = {}
+        for id, name, active in rows:
+            contact = {
+                'id': id,
+                'name': name,
+                'active': active,
+                'metadata': {}
+            }
+            contacts[id] = contact
+        for id, key, value in meta_rows:
+            if id in contacts:
+                contacts[id]['metadata'][key] = value
+        return web.json_response(list(contacts.values()))
+
+    async def post(self) -> web.Response:
+        request_data = await self.request.json()
+        contact_group_id = await create_contact_group(
+            self.request.app['dbcon'],
+            require_str(request_data.get('name', None), allow_none=False),
+            cast(bool, require_bool(request_data.get('active', True)))
+        )
+        return web.json_response(contact_group_id)
+
+    async def put(self) -> web.Response:
+        request_data = await self.request.json()
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        await update_contact_group(dbcon, contact_group_id, request_data)
+        return web.json_response(True)
+
+    async def delete(self) -> web.Response:
+        contact_group_id = cast(int, require_int(get_request_param(self.request, 'id')))
+        dbcon = self.request.app['dbcon']
+        await delete_contact_group(dbcon, contact_group_id)
         return web.json_response(True)
 
 

@@ -14,7 +14,8 @@ from irisett import errors
 from irisett.sql import DBConnection
 from irisett.object_exists import (
     contact_exists,
-    active_monitor_exists
+    active_monitor_exists,
+    contact_group_exists,
 )
 
 
@@ -42,13 +43,52 @@ async def update_contact(dbcon: DBConnection, contact_id: int, data: Dict[str, s
             q_args = (value, contact_id)
             await cur.execute(q, q_args)
 
+    if not contact_exists(dbcon, contact_id):
+        raise errors.InvalidArguments('contact does not exist')
     await dbcon.transact(_run)
 
 
 async def delete_contact(dbcon: DBConnection, contact_id: int):
     """Remove a contact from the database."""
+    if not contact_exists(dbcon, contact_id):
+        raise errors.InvalidArguments('contact does not exist')
     q = """delete from contacts where id=%s"""
     await dbcon.operation(q, (contact_id,))
+
+
+async def create_contact_group(dbcon: DBConnection, name: str, active: bool) -> str:
+    """Add a contact group to the database."""
+    q = """insert into contact_groups (name, active) values (%s, %s)"""
+    q_args = (name, active)
+    contact_group_id = await dbcon.operation(q, q_args)
+    return contact_group_id
+
+
+async def update_contact_group(dbcon: DBConnection, contact_group_id: int, data: Dict[str, str]):
+    """Update a contact groups information in the database.
+
+    Data is a dict with name/active values that will be updated.
+    """
+
+    async def _run(cur):
+        for key, value in data.items():
+            if key not in ['name', 'active']:
+                raise errors.IrisettError('invalid contact key %s' % key)
+            q = """update contact_groups set %s=%%s where id=%%s""" % key
+            q_args = (value, contact_group_id)
+            await cur.execute(q, q_args)
+
+    if not contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact group does not exist')
+    await dbcon.transact(_run)
+
+
+async def delete_contact_group(dbcon: DBConnection, contact_group_id: int):
+    """Remove a contact group from the database."""
+    if not contact_group_exists(dbcon, contact_group_id):
+        raise errors.InvalidArguments('contact group does not exist')
+    q = """delete from contact_groups where id=%s"""
+    await dbcon.operation(q, (contact_group_id,))
 
 
 async def get_all_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, Any]]:

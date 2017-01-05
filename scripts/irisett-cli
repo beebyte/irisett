@@ -132,6 +132,28 @@ def parse_args():
     cmd.add_argument('-i', '--contact-id', type=int, required=True, help='Contact id')
     cmd.set_defaults(func=delete_contact)
 
+    cmd = subparsers.add_parser('get-contact-groups', help='Get contact groups')
+    cmd.add_argument('-i', '--contact-group-id', type=int, required=False, help='Contact group id')
+    cmd.add_argument('-k', '--metadata-key', required=False, help='Metadata key')
+    cmd.add_argument('-v', '--metadata-value', required=False, help='Metadata value')
+    cmd.set_defaults(func=get_contact_groups)
+
+    cmd = subparsers.add_parser('add-contact-group', help='Add contact group')
+    cmd.add_argument('--name', required=True, help='Contact group name')
+    cmd.add_argument('--active', default=True, action='store_true', help='Active')
+    cmd.set_defaults(func=add_contact_group)
+
+    cmd = subparsers.add_parser('update-contact-group', help='Update contact group')
+    cmd.add_argument('--name', required=False, help='Contact group name')
+    cmd.add_argument('--active', action='store_true', help='Set active')
+    cmd.add_argument('--inactive', action='store_true', help='Set inactive')
+    cmd.add_argument('-i', '--def-id', type=int, required=True, help='Contact id')
+    cmd.set_defaults(func=update_contact_group)
+
+    cmd = subparsers.add_parser('delete-contact-group', help='Delete contact group')
+    cmd.add_argument('-i', '--contact-group-id', type=int, required=True, help='Contact group id')
+    cmd.set_defaults(func=delete_contact_group)
+
     cmd = subparsers.add_parser('set-metadata', help='Set metadata for an object')
     cmd.add_argument('-t', '--object-type', required=True, help='Object type')
     cmd.add_argument('-i', '--object-id', type=int, required=True, help='Object id')
@@ -526,6 +548,61 @@ def update_contact(args):
 
 def delete_contact(args):
     url = 'http://%s:%s/contact/?id=%s' % (args.host, args.port, args.contact_id)
+    request = requests.delete(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def get_contact_groups(args):
+    url = 'http://%s:%s/contact_group/' % (args.host, args.port)
+    if args.contact_group_id:
+        url = '%s?id=%s' % (url, args.contact_group_id)
+    elif args.metadata_key and args.metadata_value:
+        url = '%s?meta_key=%s&meta_value=%s' % (url, args.metadata_key, args.metadata_value)
+    request = requests.get(url=url, auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        pprint(res)
+
+
+def add_contact_group(args):
+    data = {
+        'name': args.name
+    }
+    data['active'] = args.active
+    url = 'http://%s:%s/contact_group/' % (args.host, args.port)
+    request = requests.post(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def update_contact_group(args):
+    data = {}
+    if args.name:
+        data['name'] = args.name
+    if args.active:
+        data['active'] = True
+    if args.inactive:
+        data['active'] = False
+    url = 'http://%s:%s/contact_group/?id=%s' % (args.host, args.port, args.def_id)
+    request = requests.put(url=url, data=json.dumps(data), auth=(args.user, args.password))
+    if request.status_code != 200:
+        print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
+    else:
+        res = json.loads(request.content.decode('utf-8'))
+        print(res)
+
+
+def delete_contact_group(args):
+    url = 'http://%s:%s/contact_group/?id=%s' % (args.host, args.port, args.contact_group_id)
     request = requests.delete(url=url, auth=(args.user, args.password))
     if request.status_code != 200:
         print('ERROR(%s): %s' % (request.status_code, request.content.decode('utf-8')))
