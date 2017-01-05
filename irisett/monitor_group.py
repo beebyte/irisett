@@ -158,6 +158,14 @@ async def get_contacts_for_monitor_group(dbcon: DBConnection, id: int) -> Iterab
     return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, (id,))]
 
 
+async def get_contact_groups_for_monitor_group(dbcon: DBConnection, id: int) -> Iterable[object_models.ContactGroup]:
+    q = """select cg.id, cg.name, cg.active
+            from contact_groups as cg, monitor_group_contact_groups
+            where cg.id=monitor_group_contact_groups.contact_group_id
+            and monitor_group_contact_groups.monitor_group_id=%s"""
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, (id,))]
+
+
 async def get_active_monitors_for_monitor_group(dbcon: DBConnection, id: int) -> Iterable[object_models.ActiveMonitor]:
     q = """select mon.id, mon.def_id, mon.state, mon.state_ts, mon.msg, mon.alert_id, mon.deleted,
             mon.checks_enabled, mon.alerts_enabled

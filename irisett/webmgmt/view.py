@@ -282,6 +282,7 @@ class DisplayMonitorGroupView(web.View):
             'section': 'monitor_group',
             'monitor_group': mg,
             'contacts': await monitor_group.get_contacts_for_monitor_group(dbcon, mg.id),
+            'contact_groups': await monitor_group.get_contact_groups_for_monitor_group(dbcon, mg.id),
             'active_monitors': await self._get_active_monitors(dbcon, mg.id)
         }
         return context

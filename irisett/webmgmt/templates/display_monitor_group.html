@@ -8,9 +8,18 @@
         </tr>
     </table>
     <br/>
-    <h2 class="table-heading">Active monitors in group</h2>
-    {% include "list_active_monitors_include.html" %}
-    <br/>
-    <h2 class="table-heading">Contacts in group</h2>
-    {% include "list_contacts_include.html" %}
+    {% if active_monitors %}
+        <h2 class="table-heading">Active monitors in group</h2>
+        {% include "list_active_monitors_include.html" %}
+        <br/>
+    {% endif %}
+    {% if contact_groups %}
+        <h2 class="table-heading">Contacts groups in group</h2>
+        {% include "list_contact_groups_include.html" %}
+        <br/>
+    {% endif %}
+    {% if contacts %}
+        <h2 class="table-heading">Contacts in group</h2>
+        {% include "list_contacts_include.html" %}
+    {% endif %}
 {% endblock %}
