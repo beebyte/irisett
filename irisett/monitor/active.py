@@ -737,6 +737,8 @@ async def remove_monitor_from_db(dbcon: DBConnection, monitor_id: int):
         await cur.execute(q, q_args)
         q = """delete from object_bindata where object_type="active_monitor" and object_id=%s"""
         await cur.execute(q, q_args)
+        q = """delete from active_monitor_groups where active_monitor_id=%s"""
+        await cur.execute(q, q_args)
 
     await dbcon.transact(_run)
 
