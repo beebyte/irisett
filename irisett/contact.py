@@ -371,28 +371,14 @@ async def set_contact_group_contacts(dbcon: DBConnection,
     await dbcon.transact(_run)
 
 
-async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[Dict[str, str]]:
-    """Get contacts for a contact group.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[object_models.Contact]:
+    """Get contacts for a contact group."""
     q = """select
         contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from contact_group_contacts, contacts
         where contact_group_contacts.contact_group_id = %s
         and contact_group_contacts.contact_id = contacts.id"""
-    q_args = (contact_group_id,)
-    rows = await dbcon.fetch_all(q, q_args)
-    contacts = []
-    for id, name, email, phone, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        })
-    return contacts
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, (contact_group_id,))]
 
 
 async def get_all_contact_groups(dbcon: DBConnection) -> Iterable[object_models.ContactGroup]:

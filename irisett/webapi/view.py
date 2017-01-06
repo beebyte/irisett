@@ -641,7 +641,7 @@ class ContactGroupContactView(web.View):
     async def get(self) -> web.Response:
         contact_group_id = cast(int, require_int(get_request_param(self.request, 'contact_group_id')))
         ret = await get_contacts_for_contact_group(self.request.app['dbcon'], contact_group_id)
-        return web.json_response(ret)
+        return web.json_response(object_models.list_asdict(ret))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
