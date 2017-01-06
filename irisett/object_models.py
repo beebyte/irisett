@@ -13,6 +13,16 @@ import attr
 from attr import asdict
 
 
+def insert_filter(attr, value):
+    if attr.name in ['id']:
+        return False
+    return True
+
+
+def insert_values(object):
+    return attr.astuple(object, filter=insert_filter)
+
+
 @attr.s
 class Contact:
     id = attr.ib()
@@ -20,7 +30,7 @@ class Contact:
     email = attr.ib()
     phone = attr.ib()
     active = attr.ib()
-    model_type = attr.ib(init=False, default='contact')
+    model_type = 'contact'
 
 
 @attr.s
@@ -28,7 +38,7 @@ class ContactGroup:
     id = attr.ib()
     name = attr.ib()
     active = attr.ib()
-    model_type = attr.ib(init=False, default='contact_group')
+    model_type = 'contact_group'
 
 
 @attr.s
@@ -42,7 +52,8 @@ class ActiveMonitor:
     deleted = attr.ib()
     checks_enabled = attr.ib()
     alerts_enabled = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor')
+    args = attr.ib(init=False, default=attr.Factory(dict))
+    model_type = 'active_monitor'
 
 
 @attr.s
@@ -51,7 +62,7 @@ class ActiveMonitorArg:
     monitor_id = attr.ib()
     name = attr.ib()
     value = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_arg')
+    model_type = 'active_monitor_arg'
 
 
 @attr.s
@@ -61,7 +72,7 @@ class ActiveMonitorAlert:
     start_ts = attr.ib()
     end_ts = attr.ib()
     alert_msg = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_alert')
+    model_type = 'active_monitor_alert'
 
 
 @attr.s
@@ -73,7 +84,8 @@ class ActiveMonitorDef:
     cmdline_filename = attr.ib()
     cmdline_args_tmpl = attr.ib()
     description_tmpl = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_arg')
+    args = attr.ib(init=False, default=attr.Factory(list))
+    model_type = 'active_monitor_arg'
 
 
 @attr.s
@@ -85,7 +97,7 @@ class ActiveMonitorDefArg:
     description = attr.ib()
     required = attr.ib()
     default_value = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_def_arg')
+    model_type = 'active_monitor_def_arg'
 
 
 @attr.s
@@ -94,7 +106,7 @@ class ObjectMetadata:
     object_id = attr.ib()
     key = attr.ib()
     value = attr.ib()
-    model_type = attr.ib(init=False, default='object_metadata')
+    model_type = 'object_metadata'
 
 
 @attr.s
@@ -103,7 +115,7 @@ class ObjectBindata:
     object_id = attr.ib()
     key = attr.ib()
     value = attr.ib()
-    model_type = attr.ib(init=False, default='object_bindata')
+    model_type = 'object_bindata'
 
 
 @attr.s
@@ -111,4 +123,4 @@ class MonitorGroup:
     id = attr.ib()
     parent_id = attr.ib()
     name = attr.ib()
-    model_type = attr.ib(init=False, default='monitor_group')
+    model_type = 'monitor_group'

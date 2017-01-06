@@ -10,6 +10,7 @@ from irisett import (
     stats,
     utils,
     monitor_group,
+    object_models,
 )
 from irisett.webapi import (
     errors,
@@ -457,12 +458,15 @@ class ActiveMonitorDefArgView(web.View):
     async def put(self) -> web.Response:
         request_data = await self.request.json()
         monitor_def = self._get_request_monitor_def(self.request)
-        await monitor_def.set_arg(
-            cast(str, require_str(request_data['name'])),
-            cast(str, require_str(request_data['display_name'])),
-            cast(str, require_str(request_data['description'])),
-            cast(bool, require_bool(request_data['required'])),
-            cast(str, require_str(request_data['default_value'])))
+        monitor_def.set_arg(object_models.ActiveMonitorDefArg(
+            id=0,
+            active_monitor_def_id=monitor_def.id,
+            name=cast(str, require_str(request_data['name'])),
+            display_name=cast(str, require_str(request_data['display_name'])),
+            description=cast(str, require_str(request_data['description'])),
+            required=cast(bool, require_bool(request_data['required'])),
+            default_value=cast(str, require_str(request_data['default_value'])),
+        ))
         return web.json_response(True)
 
     async def delete(self) -> web.Response:
