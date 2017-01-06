@@ -270,65 +270,32 @@ async def set_active_monitor_contact_groups(dbcon: DBConnection,
     await dbcon.transact(_run)
 
 
-async def get_contact_groups_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, str]]:
-    """Get contact groups for an active monitor.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_contact_groups_for_active_monitor(
+        dbcon: DBConnection, monitor_id: int) -> Iterable[object_models.ContactGroup]:
+    """Get contact groups for an active monitor."""
     q = """select
         contact_groups.id, contact_groups.name, contact_groups.active
         from active_monitor_contact_groups, contact_groups
         where active_monitor_contact_groups.active_monitor_id = %s
         and active_monitor_contact_groups.contact_group_id = contact_groups.id"""
-    q_args = (monitor_id,)
-    rows = await dbcon.fetch_all(q, q_args)
-    contacts = []
-    for id, name, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'active': active
-        })
-    return contacts
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, (monitor_id,))]
 
 
-async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
-    """Get all contacts
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_all_contacts(dbcon: DBConnection) -> Iterable[object_models.Contact]:
+    """Get all contacts"""
     q = """select id, name, email, phone, active from contacts"""
     rows = await dbcon.fetch_all(q)
-    contacts = []
-    for id, name, email, phone, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        })
-    return contacts
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q)]
 
 
 async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
-    """Get a single contact if it exists.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+    """Get a single contact if it exists."""
     q = """select id, name, email, phone, active from contacts where id=%s"""
     q_args = (id,)
     row = await dbcon.fetch_row(q, q_args)
     contact = None
     if row:
-        id, name, email, phone, active = row
-        contact = {
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        }
+        contact = object_models.Contact(*row)
     return contact
 
 

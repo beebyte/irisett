@@ -323,7 +323,7 @@ class ActiveMonitorContactGroupView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
         ret = await get_contact_groups_for_active_monitor(self.request.app['dbcon'], monitor_id)
-        return web.json_response(ret)
+        return web.json_response(object_models.list_asdict(ret))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
