@@ -7,20 +7,35 @@ The model definitions should exactly match the attributes and order of the
 objects in the database.
 """
 
+from typing import Iterable, Any, List
 # noinspection PyPackageRequirements
 import attr
 # noinspection PyPackageRequirements
 from attr import asdict
 
 
+def insert_values(object):
+    """Get values appropriate for inserting into the DB.
+
+    Use this as the query arguments for a plain insert of an object into
+    the standard irisett DB.
+    """
+    return attr.astuple(object, filter=insert_filter)
+
+
+def list_asdict(in_list: Iterable[Any]) -> List[Any]:
+    """asdict'ify a list of objects.
+
+    Useful when converting a list of objects to json.
+    """
+    return [asdict(obj) for obj in in_list]
+
+
 def insert_filter(attr, value):
+    """A standard filter used to prep objects for insert into the DB."""
     if attr.name in ['id']:
         return False
     return True
-
-
-def insert_values(object):
-    return attr.astuple(object, filter=insert_filter)
 
 
 @attr.s

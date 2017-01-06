@@ -286,9 +286,12 @@ class ActiveMonitorContactView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
         if 'include_all' in self.request.rel_url.query:
-            ret = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            contacts = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         else:
-            ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            contacts = object_models.asdict(
+                await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            )
+        ret = object_models.list_asdict(contacts)
         return web.json_response(ret)
 
     async def post(self) -> web.Response:
