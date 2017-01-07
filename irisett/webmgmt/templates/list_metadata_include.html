@@ -1,0 +1,15 @@
+{% if metadata %}
+    <h2 class="table-heading">Metadata</h2>
+    <table class="table table-striped">
+        <tr>
+            <th>Key</th>
+            <th>Value</th>
+        </tr>
+        {% for model in metadata %}
+            <tr>
+                <td>{{ model.key }}</td>
+                <td>{{ model.value }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endif %}

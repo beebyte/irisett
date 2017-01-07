@@ -69,21 +69,11 @@
             </tr>
         {% endfor %}
     </table>
-    {% if metadata %}
-        <br>
-        <h2 class="table-heading">Metadata</h2>
-        <table class="table kvp-table">
-            {% for key, value in metadata.items() %}
-                <tr>
-                    <td>{{ key }}</td>
-                    <td>{{ value }}</td>
-                </tr>
-            {% endfor %}
-        </table>
-    {% endif %}
     {% if contacts %}
         <br>
         <h2 class="table-heading">Contacts</h2>
         {% include "list_contacts_include.html" %}
     {% endif %}
+    <br/>
+    {% include "list_metadata_include.html" %}
 {% endblock %}

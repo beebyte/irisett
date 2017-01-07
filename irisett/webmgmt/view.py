@@ -121,7 +121,7 @@ class DisplayActiveMonitorView(web.View):
             'section': 'active_monitors',
             'notification_msg': self.request.rel_url.query.get('notification_msg'),
             'monitor': monitor,
-            'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'active_monitor', monitor_id),
             'contacts': await contact.get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
         }
         return context
@@ -241,6 +241,7 @@ class DisplayContactView(web.View):
             'section': 'contacts',
             'subsection': 'contacts',
             'contact': c,
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'contact', c.id)
         }
         return context
 
@@ -267,7 +268,9 @@ class DisplayContactGroupView(web.View):
             'section': 'contacts',
             'subsection': 'groups',
             'contact_group': contact_group,
-            'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
+            'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'contact_group',
+                                                               contact_group.id),
         }
         return context
 
@@ -294,7 +297,8 @@ class DisplayMonitorGroupView(web.View):
             'monitor_group': mg,
             'contacts': await monitor_group.get_contacts_for_monitor_group(dbcon, mg.id),
             'contact_groups': await monitor_group.get_contact_groups_for_monitor_group(dbcon, mg.id),
-            'active_monitors': await self._get_active_monitors(dbcon, mg.id)
+            'active_monitors': await self._get_active_monitors(dbcon, mg.id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'monitor_group', mg.id),
         }
         return context
 
