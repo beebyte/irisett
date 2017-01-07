@@ -8,7 +8,7 @@ A monitor managed is used for scheduling monitor service checks and starting
 each check.
 """
 
-from typing import Dict, Any, List, Union, Optional
+from typing import Dict, Any, List, Union, Optional, Iterable
 import time
 import random
 import jinja2
@@ -40,7 +40,7 @@ async def load_monitor_defs(manager: 'ActiveMonitorManager') -> Dict[int, 'Activ
 
     Return a dict mapping def id to def instance.
     """
-    sql_defs = await _sql_load_monitor_defs(manager.dbcon)
+    sql_defs = {d.id: d for d in await get_all_active_monitor_defs(manager.dbcon)}
     await _sql_load_monitor_defs_args(manager.dbcon, sql_defs)
     cls_defs = {}
     for def_id, sql_def in sql_defs.items():
@@ -51,13 +51,11 @@ async def load_monitor_defs(manager: 'ActiveMonitorManager') -> Dict[int, 'Activ
     return cls_defs
 
 
-async def _sql_load_monitor_defs(dbcon: DBConnection) -> Dict[int, object_models.ActiveMonitorDef]:
+async def get_all_active_monitor_defs(dbcon: DBConnection) -> Iterable[object_models.ActiveMonitorDef]:
     """Load monitor defs from the database."""
     q = """select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
         from active_monitor_defs"""
-    def_list = [object_models.ActiveMonitorDef(*row) for row in await dbcon.fetch_all(q)]
-    defs = {d.id: d for d in def_list}
-    return defs
+    return [object_models.ActiveMonitorDef(*row) for row in await dbcon.fetch_all(q)]
 
 
 async def _sql_load_monitor_defs_args(dbcon: DBConnection, defs: Dict[int, object_models.ActiveMonitorDef]) -> None:

@@ -16,6 +16,8 @@ from irisett import (
     monitor_group,
 )
 
+from irisett.monitor.active import get_all_active_monitor_defs
+
 from irisett.webmgmt import (
     errors,
     ws_event_proxy,
@@ -146,6 +148,16 @@ async def send_active_monitor_test_notification(request):
     return web.HTTPFound('/active_monitor/%s/?notification_msg=Notification sent' % monitor_id)
 
 
+class ListActiveMonitorDefsView(web.View):
+    @aiohttp_jinja2.template('list_active_monitor_defs.html')
+    async def get(self) -> Dict[str, Any]:
+        context = {
+            'section': 'active_monitor_defs',
+            'monitor_defs': await get_all_active_monitor_defs(self.request.app['dbcon']),
+        }
+        return context
+
+
 def parse_active_monitor_def_row(row):
     """Parse an SQL row for an active monitor def."""
     ret = {
@@ -158,26 +170,6 @@ def parse_active_monitor_def_row(row):
         'description_tmpl': row[6],
     }
     return ret
-
-
-class ListActiveMonitorDefsView(web.View):
-    @aiohttp_jinja2.template('list_active_monitor_defs.html')
-    async def get(self) -> Dict[str, Any]:
-        context = {
-            'section': 'active_monitor_defs',
-            'monitor_defs': await self._get_active_monitor_defs(),
-        }
-        return context
-
-    async def _get_active_monitor_defs(self):
-        q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs'''
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        ret = []
-        for row in rows:
-            active_monitor_def = parse_active_monitor_def_row(row)
-            ret.append(active_monitor_def)
-        return ret
 
 
 class DisplayActiveMonitorDefView(web.View):
