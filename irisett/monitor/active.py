@@ -44,13 +44,13 @@ async def load_monitor_defs(manager: 'ActiveMonitorManager') -> Dict[int, 'Activ
     """
     monitor_def_models = await active_sql.get_all_active_monitor_defs(manager.dbcon)
     monitor_def_args_map = await map_monitor_def_args_to_monitor_defs(manager.dbcon)
-    cls_defs = {}
+    monitor_defs = {}
     for monitor_def in monitor_def_models:
-        cls_defs[monitor_def.id] = ActiveMonitorDef(
+        monitor_defs[monitor_def.id] = ActiveMonitorDef(
             monitor_def.id, monitor_def.name, monitor_def.active, monitor_def.cmdline_filename,
             monitor_def.cmdline_args_tmpl, monitor_def.description_tmpl,
             monitor_def_args_map.get(monitor_def.id, []), manager)
-    return cls_defs
+    return monitor_defs
 
 
 async def map_monitor_def_args_to_monitor_defs(
@@ -72,42 +72,37 @@ async def load_monitors(manager: 'ActiveMonitorManager') -> Dict[int, 'ActiveMon
 
     Return a dict mapping monitor id to monitor instance.
     """
-    sql_monitors = await _sql_load_monitors(manager.dbcon)
-    await _sql_load_monitor_args(manager.dbcon, sql_monitors)
-    cls_monitors = {}
-    for monitor_id, sql_monitor in sql_monitors.items():
-        monitor_def = manager.monitor_defs[sql_monitor.def_id]
-        cls_monitors[monitor_id] = ActiveMonitor(
-            monitor_id, sql_monitor.args,
+    monitor_models = await active_sql.get_all_active_monitors(manager.dbcon)
+    monitor_args_map = await map_monitor_args_to_monitors(manager.dbcon)
+    monitors = {}
+    for monitor in monitor_models:
+        monitor_def = manager.monitor_defs[monitor.def_id]
+        monitors[monitor.id] = ActiveMonitor(
+            monitor.id,
+            monitor_args_map.get(monitor.id, {}),
             monitor_def,
-            sql_monitor.state,
-            sql_monitor.state_ts,
-            sql_monitor.msg,
-            sql_monitor.alert_id,
-            sql_monitor.checks_enabled,
-            sql_monitor.alerts_enabled,
+            monitor.state,
+            monitor.state_ts,
+            monitor.msg,
+            monitor.alert_id,
+            monitor.checks_enabled,
+            monitor.alerts_enabled,
             manager)
-    return cls_monitors
-
-
-async def _sql_load_monitors(dbcon: DBConnection) -> Dict[int, object_models.ActiveMonitor]:
-    """Load monitors from the database.
-
-    Returns a dict mapping monitor to a dict of monitor data.
-    """
-    q = """select id, def_id, state, state_ts, msg, alert_id, deleted, checks_enabled, alerts_enabled
-            from active_monitors"""
-    monitor_list = [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q)]
-    monitors = {m.id: m for m in monitor_list}
     return monitors
 
 
-async def _sql_load_monitor_args(dbcon: DBConnection, monitors: Dict[int, object_models.ActiveMonitor]):
-    """Take the output from _sql_load_monitors and add in monitor arguments."""
-    q = """select monitor_id, name, value from active_monitor_args"""
-    rows = await dbcon.fetch_all(q)
-    for monitor_id, name, value in rows:
-        monitors[monitor_id].args[name] = value
+async def map_monitor_args_to_monitors(
+        dbcon: DBConnection) -> Dict[int, Dict[str, str]]:
+    """Get active monitor args and map them to active monitors.
+
+    List all arguments, return a dict that maps the arguments to monitor ids.
+    """
+    ret = {}
+    for arg in await active_sql.get_all_active_monitor_args(dbcon):
+        if arg.monitor_id not in ret:
+            ret[arg.monitor_id] = {}
+        ret[arg.monitor_id][arg.name] = arg.value
+    return ret
 
 
 class ActiveMonitorManager:
