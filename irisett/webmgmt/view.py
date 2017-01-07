@@ -158,58 +158,21 @@ class ListActiveMonitorDefsView(web.View):
         return context
 
 
-def parse_active_monitor_def_row(row):
-    """Parse an SQL row for an active monitor def."""
-    ret = {
-        'id': row[0],
-        'name': row[1],
-        'description': row[2],
-        'active': row[3],
-        'cmdline_filename': row[4],
-        'cmdline_args_tmpl': row[5],
-        'description_tmpl': row[6],
-    }
-    return ret
-
-
 class DisplayActiveMonitorDefView(web.View):
     @aiohttp_jinja2.template('display_active_monitor_def.html')
     async def get(self) -> Dict[str, Any]:
+        dbcon = self.request.app['dbcon']
         monitor_def_id = int(self.request.match_info['id'])
         am_manager = self.request.app['active_monitor_manager']
         monitor_def = am_manager.monitor_defs[monitor_def_id]
-        sql_monitor_def = await self._get_active_monitor_def(monitor_def_id)
+        sql_monitor_def = await active_sql.get_active_monitor_def(dbcon, monitor_def_id)
+        sql_monitor_def.args = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         context = {
             'section': 'active_monitor_def',
             'monitor_def': monitor_def,
             'sql_monitor_def': sql_monitor_def,
         }
         return context
-
-    async def _get_active_monitor_def(self, monitor_def_id):
-        q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs where id=%s'''
-        row = await self.request.app['dbcon'].fetch_row(q, (monitor_def_id,))
-        ret = parse_active_monitor_def_row(row)
-        ret['args'] = await self._get_active_monitor_def_args(monitor_def_id)
-        return ret
-
-    async def _get_active_monitor_def_args(self, monitor_def_id):
-        q = '''select id, name, display_name, description, required, default_value
-            from active_monitor_def_args where active_monitor_def_id=%s'''
-        rows = await self.request.app['dbcon'].fetch_all(q, (monitor_def_id,))
-        ret = []
-        for row in rows:
-            arg = {
-                'id': row[0],
-                'name': row[1],
-                'display_name': row[2],
-                'description': row[3],
-                'required': row[4],
-                'default_value': row[5],
-            }
-            ret.append(arg)
-        return ret
 
 
 class ListContactsView(web.View):
