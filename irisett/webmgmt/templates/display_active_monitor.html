@@ -69,11 +69,11 @@
             </tr>
         {% endfor %}
     </table>
+    <br/>
     {% if contacts %}
-        <br>
         <h2 class="table-heading">Contacts</h2>
         {% include "list_contacts_include.html" %}
+        <br>
     {% endif %}
-    <br/>
     {% include "list_metadata_include.html" %}
 {% endblock %}
