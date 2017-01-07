@@ -99,7 +99,7 @@ async def get_metadata_for_object_type(
     """
     q = '''select metadata.object_type, metadata.object_id, metadata.key, metadata.value
         from object_metadata as metadata
-        metadata.object_type=%s'''
+        where metadata.object_type=%s'''
     return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, (object_type,))]
 
 
@@ -113,8 +113,8 @@ async def get_metadata_for_object_metadata(
     """
     q = '''select m2.object_type, m2.object_id, m2.key, m2.value
                 from object_metadata as m1
-                left join %s on contacts.id=m1.object_id
+                left join %s on %s.id=m1.object_id
                 left join object_metadata as m2 on m2.object_id=%s.id
-                where m1.key=%%s and m1.value=%%s and m2.object_type=%%s''' % (object_table, object_table)
+                where m1.key=%%s and m1.value=%%s and m2.object_type=%%s''' % (object_table, object_table, object_table)
     q_args = (metadata_key, metadata_value, object_type)
     return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, q_args)]
