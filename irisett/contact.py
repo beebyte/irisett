@@ -372,3 +372,11 @@ async def get_contact_group(dbcon: DBConnection, id: int) -> Any:  # Use any bec
     if row:
         contact = object_models.ContactGroup(*row)
     return contact
+
+
+async def get_contact_groups_for_metadata(dbcon: DBConnection, meta_key: str, meta_value: str):
+    q = """select cg.id, cg.name, cg.active
+        from contact_groups as cg, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=cg.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, q_args)]

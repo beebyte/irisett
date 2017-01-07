@@ -67,7 +67,7 @@ def get_request_param(request: web.Request, name: str, error_if_missing: bool = 
     return ret
 
 
-def apply_metadata_to_model_list(model_list: List[Any], metadata_list: List[object_models.ObjectMetadata]) -> List[Any]:
+def apply_metadata_to_model_list(model_list: Iterable[Any], metadata_list: Iterable[object_models.ObjectMetadata]) -> List[Any]:
     """Take a list of model objects and add metadata to them.
 
     This is a commonly used pattern in object get views.
@@ -552,52 +552,22 @@ class ContactView(web.View):
 class ContactGroupView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             contact_group_id = require_int(get_request_param(self.request, 'id'))
-            q = """select id, name, active from contact_groups where id=%s"""
-            q_args = (contact_group_id,)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contact_groups
-                where contact_groups.id=%s and meta.object_type="contact_group" and meta.object_id=contact_groups.id"""
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_group_list = [await contact.get_contact_group(dbcon, contact_group_id)]
+            if contact_group_list and contact_group_list[0] is None:
+                contact_group_list = []
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact_group', contact_group_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q = """select c.id, c.name, c.active
-                from contact_groups as c, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=c.id"""
-            q_args = (meta_key, meta_value)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select m2.object_id, m2.key, m2.value
-                        from object_metadata as m1
-                        left join contact_groups on contact_groups.id=m1.object_id
-                        left join object_metadata as m2 on m2.object_id=contact_groups.id
-                        where m1.key=%s and m1.value=%s and m2.object_type="contact_group"
-            """
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_group_list = await contact.get_contact_groups_for_metadata(dbcon, meta_key, meta_value)
+            metadata_list = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'contact_group', 'contact_groups')
         else:
-            q = """select id, name, active from contact_groups"""
-            rows = await dbcon.fetch_all(q)
-            meta_q = '''select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contact_groups
-                where meta.object_id=contact_groups.id and meta.object_type="contact_group"'''
-            meta_rows = await dbcon.fetch_all(meta_q)
-        contacts = {}
-        for id, name, active in rows:
-            contact = {
-                'id': id,
-                'name': name,
-                'active': active,
-                'metadata': {}
-            }
-            contacts[id] = contact
-        for id, key, value in meta_rows:
-            if id in contacts:
-                contacts[id]['metadata'][key] = value
-        return web.json_response(list(contacts.values()))
+            contact_group_list = await contact.get_all_contact_groups(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'monitor_group')
+        return web.json_response(apply_metadata_to_model_list(contact_group_list, metadata_list))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
@@ -656,8 +626,6 @@ class ContactGroupContactView(web.View):
 class MonitorGroupView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             monitor_group_id = require_int(get_request_param(self.request, 'id'))
             monitor_group_list = [await monitor_group.get_monitor_group(dbcon, monitor_group_id)]
