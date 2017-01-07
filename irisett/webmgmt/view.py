@@ -16,7 +16,7 @@ from irisett import (
     monitor_group,
 )
 
-from irisett.monitor.active import get_all_active_monitor_defs
+from irisett.monitor import active_sql
 
 from irisett.webmgmt import (
     errors,
@@ -153,7 +153,7 @@ class ListActiveMonitorDefsView(web.View):
     async def get(self) -> Dict[str, Any]:
         context = {
             'section': 'active_monitor_defs',
-            'monitor_defs': await get_all_active_monitor_defs(self.request.app['dbcon']),
+            'monitor_defs': await active_sql.get_all_active_monitor_defs(self.request.app['dbcon']),
         }
         return context
 

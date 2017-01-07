@@ -8,7 +8,7 @@ A monitor managed is used for scheduling monitor service checks and starting
 each check.
 """
 
-from typing import Dict, Any, List, Union, Optional, Iterable
+from typing import Dict, Any, List, Union, Optional
 import time
 import random
 import jinja2
@@ -25,6 +25,8 @@ from irisett import (
     event,
     object_models,
 )
+from irisett.monitor import active_sql
+
 from irisett.metadata import get_metadata
 from irisett.notify.manager import NotificationManager
 from irisett.sql import DBConnection
@@ -40,31 +42,29 @@ async def load_monitor_defs(manager: 'ActiveMonitorManager') -> Dict[int, 'Activ
 
     Return a dict mapping def id to def instance.
     """
-    sql_defs = {d.id: d for d in await get_all_active_monitor_defs(manager.dbcon)}
-    await _sql_load_monitor_defs_args(manager.dbcon, sql_defs)
+    monitor_def_models = await active_sql.get_all_active_monitor_defs(manager.dbcon)
+    monitor_def_args_map = await map_monitor_def_args_to_monitor_defs(manager.dbcon)
     cls_defs = {}
-    for def_id, sql_def in sql_defs.items():
-        cls_defs[def_id] = ActiveMonitorDef(
-            def_id, sql_def.name, sql_def.active, sql_def.cmdline_filename,
-            sql_def.cmdline_args_tmpl, sql_def.description_tmpl,
-            sql_def.args, manager)
+    for monitor_def in monitor_def_models:
+        cls_defs[monitor_def.id] = ActiveMonitorDef(
+            monitor_def.id, monitor_def.name, monitor_def.active, monitor_def.cmdline_filename,
+            monitor_def.cmdline_args_tmpl, monitor_def.description_tmpl,
+            monitor_def_args_map.get(monitor_def.id, []), manager)
     return cls_defs
 
 
-async def get_all_active_monitor_defs(dbcon: DBConnection) -> Iterable[object_models.ActiveMonitorDef]:
-    """Load monitor defs from the database."""
-    q = """select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-        from active_monitor_defs"""
-    return [object_models.ActiveMonitorDef(*row) for row in await dbcon.fetch_all(q)]
+async def map_monitor_def_args_to_monitor_defs(
+        dbcon: DBConnection) -> Dict[int, List[object_models.ActiveMonitorDefArg]]:
+    """Get active monitor def args and map them to active monitor defs.
 
-
-async def _sql_load_monitor_defs_args(dbcon: DBConnection, defs: Dict[int, object_models.ActiveMonitorDef]) -> None:
-    """Take the output from _sql_load_monitor_defs and add in def arguments."""
-    q = """select id, active_monitor_def_id, name, display_name, description, required, default_value
-            from active_monitor_def_args"""
-    for row in await dbcon.fetch_all(q):
-        def_arg = object_models.ActiveMonitorDefArg(*row)
-        defs[def_arg.active_monitor_def_id].args.append(def_arg)
+    List all arguments, return a dict that maps the arguments to monitor def ids.
+    """
+    ret = {}
+    for arg in await active_sql.get_all_active_monitor_def_args(dbcon):
+        if arg.active_monitor_def_id not in ret:
+            ret[arg.active_monitor_def_id] = []
+        ret[arg.active_monitor_def_id].append(arg)
+    return ret
 
 
 async def load_monitors(manager: 'ActiveMonitorManager') -> Dict[int, 'ActiveMonitor']:
