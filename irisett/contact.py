@@ -284,7 +284,6 @@ async def get_contact_groups_for_active_monitor(
 async def get_all_contacts(dbcon: DBConnection) -> Iterable[object_models.Contact]:
     """Get all contacts"""
     q = """select id, name, email, phone, active from contacts"""
-    rows = await dbcon.fetch_all(q)
     return [object_models.Contact(*row) for row in await dbcon.fetch_all(q)]
 
 
@@ -297,6 +296,14 @@ async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because o
     if row:
         contact = object_models.Contact(*row)
     return contact
+
+
+async def get_contacts_for_metadata(dbcon: DBConnection, meta_key: str, meta_value: str):
+    q = """select c.id, c.name, c.email, c.phone, c.active
+        from contacts as c, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="contact" and meta.object_id=c.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, q_args)]
 
 
 async def add_contact_to_contact_group(dbcon: DBConnection, contact_group_id: int, contact_id: int):

@@ -9,6 +9,7 @@ from irisett import (
     bindata,
     stats,
     utils,
+    contact,
     monitor_group,
     object_models,
 )
@@ -490,54 +491,30 @@ class ActiveMonitorDefArgView(web.View):
 class ContactView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             contact_id = require_int(get_request_param(self.request, 'id'))
-            q = """select id, name, email, phone, active from contacts where id=%s"""
-            q_args = (contact_id,)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contacts
-                where contacts.id=%s and meta.object_type="contact" and meta.object_id=contacts.id"""
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            c = await contact.get_contact(dbcon, contact_id)
+            contact_list = []
+            if c:
+                contact_list = [c]
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact', contact_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q = """select c.id, c.name, c.email, c.phone, c.active
-                from contacts as c, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="contact" and meta.object_id=c.id"""
-            q_args = (meta_key, meta_value)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select m2.object_id, m2.key, m2.value
-                        from object_metadata as m1
-                        left join contacts on contacts.id=m1.object_id
-                        left join object_metadata as m2 on m2.object_id=contacts.id
-                        where m1.key=%s and m1.value=%s and m2.object_type="contact"
-            """
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_list = await contact.get_contacts_for_metadata(dbcon, meta_key, meta_value)
+            metadata_list = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'contact', 'contacts')
         else:
-            q = """select id, name, email, phone, active from contacts"""
-            rows = await dbcon.fetch_all(q)
-            meta_q = '''select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contacts
-                where meta.object_id=contacts.id and meta.object_type="contact"'''
-            meta_rows = await dbcon.fetch_all(meta_q)
-        contacts = {}
-        for id, name, email, phone, active in rows:
-            contact = {
-                'id': id,
-                'name': name,
-                'email': email,
-                'phone': phone,
-                'active': active,
-                'metadata': {}
-            }
-            contacts[id] = contact
-        for id, key, value in meta_rows:
-            if id in contacts:
-                contacts[id]['metadata'][key] = value
-        return web.json_response(list(contacts.values()))
+            contact_list = await contact.get_all_contacts(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'contact')
+        contact_dict = {c.id: object_models.asdict(c) for c in contact_list}
+        for c in contact_dict:
+            c['metadata'] = {}
+        for m in metadata_list:
+            c = contact_dict.get(m.object_id)
+            if c:
+                c['metadata'][m.key] = m.value
+        return web.json_response(list(contact_dict.values()))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
