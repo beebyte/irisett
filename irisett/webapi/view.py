@@ -69,7 +69,8 @@ def get_request_param(request: web.Request, name: str, error_if_missing: bool = 
     return ret
 
 
-def apply_metadata_to_model_list(model_list: Iterable[Any], metadata_list: Iterable[object_models.ObjectMetadata]) -> List[Any]:
+def apply_metadata_to_model_list(
+        model_list: Iterable[Any], metadata_list: Iterable[object_models.ObjectMetadata]) -> List[Any]:
     """Take a list of model objects and add metadata to them.
 
     This is a commonly used pattern in object get views.
@@ -134,7 +135,7 @@ class ActiveMonitorView(web.View):
                 dbcon, require_int(cast(str, get_request_param(self.request, 'monitor_group_id'))))
         else:
             metadata_models = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor')
-        metadata_dict = {}
+        metadata_dict = {}  # type: Dict[int, Dict[str, str]]
         for metadata_model in metadata_models:
             if metadata_model.object_id not in metadata_dict:
                 metadata_dict[metadata_model.object_id] = {}
@@ -380,16 +381,17 @@ class ActiveMonitorDefView(web.View):
         dbcon = self.request.app['dbcon']
         if 'id' in self.request.rel_url.query:
             monitor_def_id = require_int(get_request_param(self.request, 'id'))
-            monitor_def_list = [await active_sql.get_active_monitor_def(dbcon, monitor_def_id)]
-            if monitor_def_list and monitor_def_list[0] is None:
-                monitor_def_list = []
+            monitor_def_item = await active_sql.get_active_monitor_def(dbcon, monitor_def_id)
+            monitor_def_list = []  # type: Iterable[object_models.ActiveMonitorDef]
+            if monitor_def_item:
+                monitor_def_list = [monitor_def_item]
             metadata_list = await metadata.get_metadata_for_object(dbcon, 'active_monitor_def', monitor_def_id)
             arg_list = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         else:
             monitor_def_list = await active_sql.get_all_active_monitor_defs(dbcon)
             metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor_def')
             arg_list = await active_sql.get_all_active_monitor_def_args(dbcon)
-        monitor_def_dict = {model.id: object_models.asdict(model) for model in monitor_def_list}
+        monitor_def_dict = {item.id: object_models.asdict(item) for item in monitor_def_list}
         for monitor_def in monitor_def_dict.values():
             monitor_def['metadata'] = {}
             monitor_def['arg_def'] = []
@@ -486,7 +488,7 @@ class ContactView(web.View):
         if 'id' in self.request.rel_url.query:
             contact_id = require_int(get_request_param(self.request, 'id'))
             c = await contact.get_contact(dbcon, contact_id)
-            contact_list = []
+            contact_list = []  # type: Iterable[object_models.Contact]
             if c:
                 contact_list = [c]
             metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact', contact_id)
@@ -531,9 +533,10 @@ class ContactGroupView(web.View):
         dbcon = self.request.app['dbcon']
         if 'id' in self.request.rel_url.query:
             contact_group_id = require_int(get_request_param(self.request, 'id'))
-            contact_group_list = [await contact.get_contact_group(dbcon, contact_group_id)]
-            if contact_group_list and contact_group_list[0] is None:
-                contact_group_list = []
+            contact_group_item = await contact.get_contact_group(dbcon, contact_group_id)
+            contact_group_list = []  # type: Iterable[object_models.ContactGroup]
+            if contact_group_item:
+                contact_group_list = [contact_group_item]
             metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact_group', contact_group_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
@@ -605,9 +608,10 @@ class MonitorGroupView(web.View):
         dbcon = self.request.app['dbcon']
         if 'id' in self.request.rel_url.query:
             monitor_group_id = require_int(get_request_param(self.request, 'id'))
-            monitor_group_list = [await monitor_group.get_monitor_group(dbcon, monitor_group_id)]
-            if monitor_group_list and monitor_group_list[0] is None:
-                monitor_group_list = []
+            monitor_group_item = await monitor_group.get_monitor_group(dbcon, monitor_group_id)
+            monitor_group_list = []  # type: Iterable[object_models.MonitorGroup]
+            if monitor_group_item:
+                monitor_group_list = [monitor_group_item]
             metadata_list = await metadata.get_metadata_for_object(dbcon, 'monitor_group', monitor_group_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))

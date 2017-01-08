@@ -21,7 +21,7 @@ async def get_active_monitor_def(dbcon: DBConnection, id: int) -> Optional[objec
         from active_monitor_defs where id=%s"""
     res = [object_models.ActiveMonitorDef(*row) for row in await dbcon.fetch_all(q, (id,))]
     if res:
-        active_monitor_def = res[0]
+        active_monitor_def = res[0]  # type: Optional[object_models.ActiveMonitorDef]
     else:
         active_monitor_def = None
     return active_monitor_def

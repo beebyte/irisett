@@ -166,6 +166,8 @@ class DisplayActiveMonitorDefView(web.View):
         am_manager = self.request.app['active_monitor_manager']
         monitor_def = am_manager.monitor_defs[monitor_def_id]
         sql_monitor_def = await active_sql.get_active_monitor_def(dbcon, monitor_def_id)
+        if not sql_monitor_def:
+            raise errors.NotFound()
         sql_monitor_def.args = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         context = {
             'section': 'active_monitor_def',

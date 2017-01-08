@@ -59,7 +59,7 @@ async def map_monitor_def_args_to_monitor_defs(
 
     List all arguments, return a dict that maps the arguments to monitor def ids.
     """
-    ret = {}
+    ret = {}  # type: Dict[int, List[object_models.ActiveMonitorDefArg]]
     for arg in await active_sql.get_all_active_monitor_def_args(dbcon):
         if arg.active_monitor_def_id not in ret:
             ret[arg.active_monitor_def_id] = []
@@ -97,7 +97,7 @@ async def map_monitor_args_to_monitors(
 
     List all arguments, return a dict that maps the arguments to monitor ids.
     """
-    ret = {}
+    ret = {}  # type: Dict[int, Dict[str, str]]
     for arg in await active_sql.get_all_active_monitor_args(dbcon):
         if arg.monitor_id not in ret:
             ret[arg.monitor_id] = {}
@@ -811,7 +811,7 @@ async def update_monitor_def_arg_in_db(dbcon: DBConnection, arg: object_models.A
     q = """update active_monitor_def_args
         set name=%s, display_name=%s, description=%s, required=%s, default_value=%s
         where id=%s"""
-    q_args = (arg.name, arg.display_name, arg.description, arg.required, arg.default_value, arg.arg_id)
+    q_args = (arg.name, arg.display_name, arg.description, arg.required, arg.default_value, arg.id)
     await dbcon.operation(q, q_args)
 
 
