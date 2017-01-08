@@ -53,3 +53,12 @@ async def get_all_active_monitor_args(dbcon: DBConnection) -> Iterable[object_mo
     """Load monitor args from the database."""
     q = """select id, monitor_id, name, value from active_monitor_args"""
     return [object_models.ActiveMonitorArg(*row) for row in await dbcon.fetch_all(q)]
+
+
+async def get_active_monitors_for_metadata(dbcon: DBConnection, meta_key: str, meta_value: str):
+    q = """select mon.id, mon.def_id, mon.state, mon.state_ts, mon.msg, mon.alert_id, mon.deleted,
+        mon.checks_enabled, mon.alerts_enabled
+        from active_monitors as mon, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="active_monitor" and meta.object_id=mon.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q, q_args)]

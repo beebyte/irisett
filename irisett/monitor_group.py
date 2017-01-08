@@ -181,3 +181,13 @@ async def get_monitor_groups_for_metadata(dbcon: DBConnection, meta_key: str, me
         where meta.key=%s and meta.value=%s and meta.object_type="monitor_group" and meta.object_id=mg.id"""
     q_args = (meta_key, meta_value)
     return [object_models.MonitorGroup(*row) for row in await dbcon.fetch_all(q, q_args)]
+
+
+async def get_active_monitor_metadata_for_monitor_group(
+        dbcon: DBConnection, id: int) -> Iterable[object_models.ObjectMetadata]:
+    q = '''select metadata.object_type, metadata.object_id, metadata.key, metadata.value
+            from monitor_group_active_monitors, object_metadata as metadata
+            where monitor_group_active_monitors.monitor_group_id=%s and
+            metadata.object_id=monitor_group_active_monitors.active_monitor_id
+            and metadata.object_type="active_monitor"'''
+    return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, (id,))]
