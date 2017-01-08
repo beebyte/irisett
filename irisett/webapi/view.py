@@ -23,6 +23,7 @@ from irisett.monitor.active import (
     create_active_monitor_def,
     get_monitor_def_by_name,
 )
+from irisett.monitor import active_sql
 from irisett.contact import (
     create_contact,
     update_contact,
@@ -368,63 +369,31 @@ class ActiveMonitorContactGroupView(web.View):
 
 class ActiveMonitorDefView(web.View):
     async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
         if 'id' in self.request.rel_url.query:
-            ret = await self.get_monitor_def()
+            monitor_def_id = require_int(get_request_param(self.request, 'id'))
+            monitor_def_list = [await active_sql.get_active_monitor_def(dbcon, monitor_def_id)]
+            if monitor_def_list and monitor_def_list[0] is None:
+                monitor_def_list = []
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'active_monitor_def', monitor_def_id)
+            arg_list = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         else:
-            ret = await self.list_monitor_defs()
-        return ret
-
-    async def get_monitor_def(self):
-        monitor_def = self._get_request_monitor_def(self.request)
-        q_args = (monitor_def.id,)
-        q = """select
-            id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs where id=%s"""
-        rows = await self.request.app['dbcon'].fetch_all(q, q_args)
-        monitor_def = self._make_monitor_def_from_row(rows[0])
-        q = """select
-            id, active_monitor_def_id, name, display_name, description, required, default_value
-            from active_monitor_def_args where active_monitor_def_id=%s"""
-        rows = await self.request.app['dbcon'].fetch_all(q, q_args)
-        for row in rows:
-            arg = self._make_monitor_def_arg_from_row(row)
-            monitor_def['arg_def'].append(arg)
-        return web.json_response([monitor_def])
-
-    async def list_monitor_defs(self):
-        q = """select
-            id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs"""
-        defs = []
-        def_dict = {}
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        for row in rows:
-            monitor_def = self._make_monitor_def_from_row(row)
-            defs.append(monitor_def)
-            def_dict[monitor_def['id']] = monitor_def
-        q = """select
-            id, active_monitor_def_id, name, display_name, description, required, default_value
-            from active_monitor_def_args"""
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        for row in rows:
-            arg = self._make_monitor_def_arg_from_row(row)
-            def_dict[row[1]]['arg_def'].append(arg)
-        return web.json_response([defs])
-
-    # noinspection PyMethodMayBeStatic
-    def _make_monitor_def_from_row(self, row):
-        id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl = row
-        monitor_def = {
-            'id': id,
-            'name': name,
-            'description': description,
-            'active': active,
-            'cmdline_filename': cmdline_filename,
-            'cmdline_args_tmpl': cmdline_args_tmpl,
-            'description_tmpl': description_tmpl,
-            'arg_def': []
-        }
-        return monitor_def
+            monitor_def_list = await active_sql.get_all_active_monitor_defs(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor_def')
+            arg_list = await active_sql.get_all_active_monitor_def_args(dbcon)
+        monitor_def_dict = {model.id: object_models.asdict(model) for model in monitor_def_list}
+        for monitor_def in monitor_def_dict.values():
+            monitor_def['metadata'] = {}
+            monitor_def['arg_def'] = []
+        for arg in arg_list:
+            monitor_def = monitor_def_dict.get(arg.active_monitor_def_id)
+            if monitor_def:
+                monitor_def['arg_def'].append(object_models.asdict(arg))
+        for metadata_obj in metadata_list:
+            monitor_def = monitor_def_dict.get(metadata_obj.object_id)
+            if monitor_def:
+                monitor_def['metadata'][metadata_obj.key] = metadata_obj.value
+        return web.json_response(list(monitor_def_dict.values()))
 
     # noinspection PyMethodMayBeStatic
     def _make_monitor_def_arg_from_row(self, row):
