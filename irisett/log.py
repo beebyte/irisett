@@ -17,7 +17,7 @@ logger = None
 
 
 def configure_logging(logtype: str, logfilename: Optional[str]=None, debug_logging: bool=False,
-                      rotate_length: int=1000000, max_rotated_files: int=250):
+                      rotate_length: int=1000000, max_rotated_files: int=250) -> None:
     global logger
     level = logging.INFO
     if debug_logging:
@@ -52,7 +52,7 @@ def configure_logging(logtype: str, logfilename: Optional[str]=None, debug_loggi
     logger.addHandler(handler)
 
 
-def msg(logmsg: str, section=None):
+def msg(logmsg: str, section: Optional[str]=None) -> None:
     """Log a standard message."""
     global logger
     if not logger:
@@ -65,7 +65,7 @@ def msg(logmsg: str, section=None):
 err = msg
 
 
-def debug(logmsg: str, section=None):
+def debug(logmsg: str, section: Optional[str]=None) -> None:
     """Log a debug message."""
     global logger
     if not logger:
@@ -78,8 +78,8 @@ def debug(logmsg: str, section=None):
 class LoggingMixin:
     """class mixin for improved? logging output."""
 
-    def log_msg(self, logmsg):
+    def log_msg(self, logmsg: str) -> None:
         msg('%s %s' % (str(self), logmsg))
 
-    def log_debug(self, logmsg):
+    def log_debug(self, logmsg: str) -> None:
         debug('%s %s' % (str(self), logmsg))

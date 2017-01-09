@@ -5,8 +5,8 @@ Metadata is managed using metadicts, ie. key/value pairs
 of (short) data that are attached to an object.
 """
 
-from typing import Dict, Iterable, Optional
-from irisett.sql import DBConnection
+from typing import Dict, Iterable, Optional, Tuple
+from irisett.sql import DBConnection, Cursor
 from irisett import object_models
 
 
@@ -27,7 +27,7 @@ async def add_metadata(dbcon: DBConnection, object_type: str, object_id: int, me
     Metadict is a dictionary of key value pairs to add.
     """
 
-    async def _run(cur):
+    async def _run(cur: Cursor) -> None:
         q = """insert into object_metadata (object_type, object_id, `key`, value) values (%s, %s, %s, %s)"""
         for key, value in metadict.items():
             q_args = (object_type, object_id, str(key), str(value))
@@ -42,11 +42,11 @@ async def update_metadata(dbcon: DBConnection, object_type: str, object_id: int,
     Metadict is a dictionary of key value pairs to add.
     """
 
-    async def _run(cur):
+    async def _run(cur: Cursor) -> None:
         for key, value in metadict.items():
             if value in [False, None]:
                 q = """delete from object_metadata where object_type=%s and object_id=%s and `key`=%s"""
-                q_args = (object_type, object_id, str(key))
+                q_args = (object_type, object_id, str(key))  # type: Tuple
             else:
                 q = """replace into object_metadata (object_type, object_id, `key`, value) values (%s, %s, %s, %s)"""
                 q_args = (object_type, object_id, str(key), str(value))
@@ -63,12 +63,12 @@ async def delete_metadata(dbcon: DBConnection, object_type: str, object_id: int,
     metadata for the object.
     """
 
-    async def _run(cur):
+    async def _run(cur: Cursor) -> None:
         if keys:
             # noinspection PyTypeChecker
             for key in keys:
                 q = """delete from object_metadata where object_type=%s and object_id=%s and `key`=%s"""
-                q_args = (object_type, object_id, key)
+                q_args = (object_type, object_id, key)  # type: Tuple
                 await cur.execute(q, q_args)
         else:
             q = """delete from object_metadata where object_type=%s and object_id=%s"""

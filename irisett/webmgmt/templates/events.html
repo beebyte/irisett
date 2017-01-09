@@ -138,14 +138,14 @@ live from the irisett server.
 
         eventSocket.onopen = function () {
             add_output_row("Connected, listening for events", "", "",  "");
-            var event_filter = url_params.get("event_filter")
+            var event_filter = url_params.get("event_filter");
             if (event_filter != null) {
                 send_msg({
                     cmd: 'event_filter',
                     filter: event_filter.split(",")
                 })
             }
-            var active_monitor_filter = url_params.get("active_monitor_filter")
+            var active_monitor_filter = url_params.get("active_monitor_filter");
             if (active_monitor_filter != null) {
                 send_msg({
                     cmd: 'active_monitor_filter',

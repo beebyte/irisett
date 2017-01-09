@@ -173,7 +173,7 @@ class ActiveMonitorView(web.View):
             ret['metadata'] = metadata_dict.get(monitor.id, {})
         return ret
 
-    async def post(self):
+    async def post(self) -> None:
         request_data = await self.request.json()
         args = require_dict(request_data['args'], str, None)
         if request_data.get('use_monitor_def_name', False):
@@ -405,19 +405,6 @@ class ActiveMonitorDefView(web.View):
                 monitor_def['metadata'][metadata_obj.key] = metadata_obj.value
         return web.json_response(list(monitor_def_dict.values()))
 
-    # noinspection PyMethodMayBeStatic
-    def _make_monitor_def_arg_from_row(self, row):
-        id, active_monitor_def_id, name, display_name, description, required, default_value = row
-        arg = {
-            'id': id,
-            'name': name,
-            'display_name': display_name,
-            'description': description,
-            'required': required,
-            'default_value': default_value,
-        }
-        return arg
-
     async def post(self) -> web.Response:
         request_data = await self.request.json()
         monitor_def = await create_active_monitor_def(
@@ -444,7 +431,7 @@ class ActiveMonitorDefView(web.View):
         return web.json_response(True)
 
     # noinspection PyMethodMayBeStatic
-    def _get_request_monitor_def(self, request):
+    def _get_request_monitor_def(self, request: web.Request) -> ActiveMonitorDef:
         monitor_def_id = require_int(get_request_param(request, 'id'))
         monitor_def = request.app['active_monitor_manager'].monitor_defs.get(monitor_def_id, None)
         if not monitor_def:

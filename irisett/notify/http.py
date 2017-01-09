@@ -30,7 +30,7 @@ async def send_alert_notification(settings: Dict[str, Any], email_recipients: It
     await send_http_notification(settings['url'], data)
 
 
-def parse_settings(config) -> Optional[Dict[str, Any]]:
+def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     ret = {
         'url': config.get('http-url'),
     }  # type: Any

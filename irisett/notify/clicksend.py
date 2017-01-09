@@ -33,7 +33,7 @@ async def send_sms(recipients: Iterable[str], msg: str, username: str, api_key: 
         log.msg('Error sending clicksend sms notification: %s' % (str(e)), 'NOTIFICATIONS')
 
 
-def parse_settings(config) -> Optional[Dict[str, Any]]:
+def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     """Parse clicksend sms settings.
 
     Should only be called from sms.parse_settings.

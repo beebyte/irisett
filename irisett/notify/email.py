@@ -7,6 +7,7 @@ from email import charset
 charset.add_charset('utf-8', charset.SHORTEST, charset.QP)  # type: ignore
 # noinspection PyPep8
 from email.mime.text import MIMEText
+import asyncio
 
 # noinspection PyPep8
 from irisett import (
@@ -14,8 +15,8 @@ from irisett import (
 )
 
 
-async def send_email(loop, mail_from: str, mail_to: Union[Iterable, str],
-                     subject: str, body: str, server: str='localhost'):
+async def send_email(loop: asyncio.AbstractEventLoop, mail_from: str, mail_to: Union[Iterable, str],
+                     subject: str, body: str, server: str='localhost') -> None:
     """Send an email to one or more recipients.
 
     Only supports plain text emails with a single message body.
@@ -37,13 +38,15 @@ async def send_email(loop, mail_from: str, mail_to: Union[Iterable, str],
         log.msg('Error sending smtp notification: %s' % (str(e)), 'NOTIFICATIONS')
 
 
-async def send_alert_notification(loop, settings: Dict[str, Any], recipients: Iterable[str], tmpl_args: Dict[str, Any]):
+async def send_alert_notification(
+        loop: asyncio.AbstractEventLoop, settings: Dict[str, Any],
+        recipients: Iterable[str], tmpl_args: Dict[str, Any]) -> None:
     subject = settings['tmpl-subject'].render(**tmpl_args)
     body = settings['tmpl-body'].render(**tmpl_args)
     await send_email(loop, settings['sender'], recipients, subject, body, settings['server'])
 
 
-def parse_settings(config) -> Optional[Dict[str, Any]]:
+def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     ret = {
         'sender': config.get('email-sender'),
         'tmpl-subject': config.get('email-tmpl-subject'),

@@ -5,6 +5,9 @@ This modules uses the attrs module to define models for Irisett objects
 
 The model definitions should exactly match the attributes and order of the
 objects in the database.
+
+NOTE: typing for this module is done in object_models.pyi due to
+how the dynamic nature of the attr module interacts with mypy.
 """
 
 from typing import Iterable, Any, List, Tuple
@@ -31,6 +34,7 @@ def list_asdict(in_list: Iterable[Any]) -> List[Any]:
     return [asdict(obj) for obj in in_list]
 
 
+# noinspection PyUnusedLocal
 def insert_filter(attribute: Any, value: Any) -> bool:
     """A standard filter used to prep objects for insert into the DB."""
     if attribute.name in ['id']:

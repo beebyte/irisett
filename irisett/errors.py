@@ -1,5 +1,5 @@
 class IrisettError(Exception):
-    def __str__(self):
+    def __str__(self) -> str:
         if len(self.args) == 1:
             ret = self.args[0]
         else:
