@@ -347,7 +347,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         self.tmpl_cache.flush_all()
         await self.manager.dbcon.transact(_run)
 
-    def iter_monitors(self) -> Iterator[ActiveMonitor]:
+    def iter_monitors(self) -> Iterator['ActiveMonitor']:
         """List all monitors that use this monitor def."""
         for monitor in self.manager.monitors.values():
             if monitor.monitor_def.id == self.id:

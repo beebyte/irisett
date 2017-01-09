@@ -89,7 +89,7 @@ class EventsView(web.View):
         return context
 
 
-async def events_websocket_handler(request):
+async def events_websocket_handler(request: web.Request) -> Any:
     """GET view for events websocket.
 
     All the work is done in the WSEventProxy class.

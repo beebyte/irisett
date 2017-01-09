@@ -24,7 +24,7 @@ from irisett.sql import DBConnection
 from irisett.monitor.active import ActiveMonitorManager
 
 
-def setup_routes(app: web.Application):
+def setup_routes(app: web.Application) -> None:
     r = app.router.add_route
     r('*', '/', view.IndexView)
     r('*', '/statistics/', view.StatisticsView)
@@ -49,7 +49,7 @@ def setup_routes(app: web.Application):
 
 
 def initialize(loop: asyncio.AbstractEventLoop, port: int, username: str, password: str, dbcon: DBConnection,
-               active_monitor_manager: ActiveMonitorManager):
+               active_monitor_manager: ActiveMonitorManager) -> None:
     """Initialize the webmgmt listener."""
     stats.set('num_calls', 0, 'WEBMGMT')
     app = web.Application(loop=loop, logger=log.logger,
