@@ -4,8 +4,8 @@ if sys.version_info < (3, 5, 0):
     sys.stderr.write("ERROR: You need Python 3.5 or later to use Irisett.\n")
     exit(1)
 
-# noinspection PyPep8
-from distutils.core import setup
+from setuptools import setup
+
 
 long_description = '''
 Irisett -- A small API driven monitoring engine
