@@ -47,13 +47,6 @@ class Contact:
     active = attr.ib()
     model_type = 'contact'
 
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
-
 
 @attr.s
 class ContactGroup:
@@ -61,13 +54,6 @@ class ContactGroup:
     name = attr.ib()
     active = attr.ib()
     model_type = 'contact_group'
-
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
 
 
 @attr.s
@@ -84,13 +70,6 @@ class ActiveMonitor:
     args = attr.ib(init=False, default=attr.Factory(dict))
     model_type = 'active_monitor'
 
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
-
 
 @attr.s
 class ActiveMonitorArg:
@@ -99,13 +78,6 @@ class ActiveMonitorArg:
     name = attr.ib()
     value = attr.ib()
     model_type = 'active_monitor_arg'
-
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
 
 
 @attr.s
@@ -116,13 +88,6 @@ class ActiveMonitorAlert:
     end_ts = attr.ib()
     alert_msg = attr.ib()
     model_type = 'active_monitor_alert'
-
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
 
 
 @attr.s
@@ -137,13 +102,6 @@ class ActiveMonitorDef:
     args = attr.ib(init=False, default=attr.Factory(list))
     model_type = 'active_monitor_arg'
 
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
-
 
 @attr.s
 class ActiveMonitorDefArg:
@@ -156,13 +114,6 @@ class ActiveMonitorDefArg:
     default_value = attr.ib()
     model_type = 'active_monitor_def_arg'
 
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
-
 
 @attr.s
 class ObjectMetadata:
@@ -171,13 +122,6 @@ class ObjectMetadata:
     key = attr.ib()
     value = attr.ib()
     model_type = 'object_metadata'
-
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
 
 
 @attr.s
@@ -188,13 +132,6 @@ class ObjectBindata:
     value = attr.ib()
     model_type = 'object_bindata'
 
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
-
 
 @attr.s
 class MonitorGroup:
@@ -202,10 +139,3 @@ class MonitorGroup:
     parent_id = attr.ib()
     name = attr.ib()
     model_type = 'monitor_group'
-
-    def __init__(*args, **kwargs):
-        """This is only here to stop mypy from complaining.
-
-        It will be replaced by the class decorator.
-        """
-        pass
