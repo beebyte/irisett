@@ -34,6 +34,7 @@ def list_asdict(in_list: Iterable[Any]) -> List[Any]:
     return [asdict(obj) for obj in in_list]
 
 
+# noinspection PyUnusedLocal
 def insert_filter(attribute: Any, value: Any) -> bool:
     """A standard filter used to prep objects for insert into the DB."""
     if attribute.name in ['id']:

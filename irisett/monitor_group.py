@@ -5,7 +5,7 @@ as a cosmetic feature, but also to connect multiple monitors to contacts
 without setting the contact(s) for each monitor.
 """
 
-from typing import Optional, Dict, Any, Iterable, Tuple
+from typing import Optional, Dict, Any, Iterable
 from irisett.sql import DBConnection, Cursor
 from irisett import (
     errors,

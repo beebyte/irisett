@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Any, List, Optional
+from typing import Dict, Iterable, Any, List
 import asyncio
 
 from irisett import (
