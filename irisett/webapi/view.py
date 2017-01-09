@@ -714,7 +714,7 @@ class MetadataView(web.View):
         metadict = await metadata.get_metadata(self.request.app['dbcon'], object_type, object_id)
         return web.json_response(metadict)
 
-    async def post(self):
+    async def post(self) -> web.Response:
         request_data = await self.request.json()
         await metadata.update_metadata(
             self.request.app['dbcon'],
@@ -724,7 +724,7 @@ class MetadataView(web.View):
         )
         return web.json_response(True)
 
-    async def delete(self):
+    async def delete(self) -> web.Response:
         request_data = await self.request.json()
         await metadata.delete_metadata(
             self.request.app['dbcon'],

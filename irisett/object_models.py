@@ -7,14 +7,14 @@ The model definitions should exactly match the attributes and order of the
 objects in the database.
 """
 
-from typing import Iterable, Any, List
+from typing import Iterable, Any, List, Tuple
 # noinspection PyPackageRequirements
 import attr
 # noinspection PyPackageRequirements
 from attr import asdict
 
 
-def insert_values(object):
+def insert_values(object: Any) -> Tuple:
     """Get values appropriate for inserting into the DB.
 
     Use this as the query arguments for a plain insert of an object into
@@ -31,7 +31,7 @@ def list_asdict(in_list: Iterable[Any]) -> List[Any]:
     return [asdict(obj) for obj in in_list]
 
 
-def insert_filter(attribute, value):
+def insert_filter(attribute: Any, value: Any) -> bool:
     """A standard filter used to prep objects for insert into the DB."""
     if attribute.name in ['id']:
         return False

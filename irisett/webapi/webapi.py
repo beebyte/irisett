@@ -19,7 +19,7 @@ from irisett.sql import DBConnection
 from irisett.monitor.active import ActiveMonitorManager
 
 
-def setup_routes(app: web.Application):
+def setup_routes(app: web.Application) -> None:
     app.router.add_route('*', '/active_monitor/', view.ActiveMonitorView)
     app.router.add_route('*', '/active_monitor_alert/', view.ActiveMonitorAlertView)
     app.router.add_route('*', '/active_monitor_contact/', view.ActiveMonitorContactView)
@@ -39,7 +39,7 @@ def setup_routes(app: web.Application):
 
 
 def initialize(loop: asyncio.AbstractEventLoop, port: int, username: str, password: str, dbcon: DBConnection,
-               active_monitor_manager: ActiveMonitorManager):
+               active_monitor_manager: ActiveMonitorManager) -> None:
     """Initialize the webapi listener."""
     stats.set('num_calls', 0, 'WEBAPI')
     app = web.Application(loop=loop, logger=log.logger,
