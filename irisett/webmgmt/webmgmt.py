@@ -72,5 +72,5 @@ def initialize(loop: asyncio.AbstractEventLoop, port: int, username: str, passwo
     )
 
     listener = loop.create_server(app.make_handler(), '0.0.0.0', port)
-    loop.create_task(listener)  # type: ignore
+    asyncio.ensure_future(listener)
     log.msg('Webmgmt listening on port %s' % port)

@@ -125,7 +125,7 @@ class EventTracer:
                 continue
             try:
                 t = listener.callback(listener, event_name, timestamp, kwargs)
-                self.loop.create_task(t)
+                asyncio.ensure_future(t)
             except Exception as e:
                 log.msg('Failed to run event listener callback: %s' % str(e))
 

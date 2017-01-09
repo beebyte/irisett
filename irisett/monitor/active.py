@@ -172,7 +172,7 @@ class ActiveMonitorManager:
         _run_monitor is a coroutine and can't be called directly from
         loop.call_later.
         """
-        self.loop.create_task(self._run_monitor(monitor_id))  # type: ignore
+        asyncio.ensure_future(self._run_monitor(monitor_id))
 
     async def _run_monitor(self, monitor_id: int):
         monitor = self.monitors.get(monitor_id)
@@ -207,7 +207,7 @@ class ActiveMonitorManager:
                 monitor.scheduled_job.cancel()
             except ValueError:
                 pass
-        monitor.scheduled_job = self.loop.call_later(interval, self.run_monitor, monitor.id)  # type: ignore
+        monitor.scheduled_job = self.loop.call_later(interval, self.run_monitor, monitor.id)
         monitor.scheduled_job_ts = time.time() + interval
         event.running('SCHEDULE_ACTIVE_MONITOR', monitor=monitor, interval=interval)
 
@@ -561,8 +561,8 @@ class ActiveMonitor(log.LoggingMixin):
         tmpl_data['msg'] = self.msg
         # Don't wait for notifications to be sent, it may or may not take a
         # while and we don't want to pause the monitoring to wait for it.
-        self.manager.loop.create_task(  # type: ignore
-            self.manager.notification_manager.send_notification(contacts, tmpl_data))  # type: ignore
+        asyncio.ensure_future(
+            self.manager.notification_manager.send_notification(contacts, tmpl_data))
 
     def update_consecutive_checks(self, state):
         """Update the counter for consecutive checks with the same result."""
