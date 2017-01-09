@@ -461,6 +461,7 @@ class ActiveMonitor(log.LoggingMixin):
         expanded_args = self.get_expanded_args()
         self.log_debug('monitoring: %s %s' % (self.monitor_def.cmdline_filename, expanded_args))
         event.running('RUN_ACTIVE_MONITOR', monitor=self)
+        # noinspection PyUnusedLocal
         msg = ''  # type: Union[str, bytes]
         try:
             _msg = await nagios.run_plugin(self.monitor_def.cmdline_filename, expanded_args, 30)
@@ -796,9 +797,9 @@ async def remove_monitor_def_from_db(dbcon: DBConnection, monitor_def_id: int) -
     def _run(cur: sql.Cursor) -> None:
         q_args = (monitor_def_id,)
         q = """delete from active_monitor_defs where id=%s"""
-        cur.operation(q, q_args)
+        cur.execute(q, q_args)
         q = """delete from active_monitor_def_args where active_monitor_def_id=%s"""
-        cur.operation(q, q_args)
+        cur.execute(q, q_args)
 
     await dbcon.transact(_run)
 
