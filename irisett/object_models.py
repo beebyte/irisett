@@ -7,20 +7,35 @@ The model definitions should exactly match the attributes and order of the
 objects in the database.
 """
 
+from typing import Iterable, Any, List
 # noinspection PyPackageRequirements
 import attr
 # noinspection PyPackageRequirements
 from attr import asdict
 
 
-@attr.s
-class ActiveMonitorAlert:
-    id = attr.ib()
-    monitor_id = attr.ib()
-    start_ts = attr.ib()
-    end_ts = attr.ib()
-    alert_msg = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor_alert')
+def insert_values(object):
+    """Get values appropriate for inserting into the DB.
+
+    Use this as the query arguments for a plain insert of an object into
+    the standard irisett DB.
+    """
+    return attr.astuple(object, filter=insert_filter)
+
+
+def list_asdict(in_list: Iterable[Any]) -> List[Any]:
+    """asdict'ify a list of objects.
+
+    Useful when converting a list of objects to json.
+    """
+    return [asdict(obj) for obj in in_list]
+
+
+def insert_filter(attribute, value):
+    """A standard filter used to prep objects for insert into the DB."""
+    if attribute.name in ['id']:
+        return False
+    return True
 
 
 @attr.s
@@ -30,7 +45,14 @@ class Contact:
     email = attr.ib()
     phone = attr.ib()
     active = attr.ib()
-    model_type = attr.ib(init=False, default='contact')
+    model_type = 'contact'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
 
 
 @attr.s
@@ -38,15 +60,14 @@ class ContactGroup:
     id = attr.ib()
     name = attr.ib()
     active = attr.ib()
-    model_type = attr.ib(init=False, default='contact_group')
+    model_type = 'contact_group'
 
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
 
-@attr.s
-class MonitorGroup:
-    id = attr.ib()
-    parent_id = attr.ib()
-    name = attr.ib()
-    model_type = attr.ib(init=False, default='monitor_group')
+        It will be replaced by the class decorator.
+        """
+        pass
 
 
 @attr.s
@@ -60,4 +81,131 @@ class ActiveMonitor:
     deleted = attr.ib()
     checks_enabled = attr.ib()
     alerts_enabled = attr.ib()
-    model_type = attr.ib(init=False, default='active_monitor')
+    args = attr.ib(init=False, default=attr.Factory(dict))
+    model_type = 'active_monitor'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ActiveMonitorArg:
+    id = attr.ib()
+    monitor_id = attr.ib()
+    name = attr.ib()
+    value = attr.ib()
+    model_type = 'active_monitor_arg'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ActiveMonitorAlert:
+    id = attr.ib()
+    monitor_id = attr.ib()
+    start_ts = attr.ib()
+    end_ts = attr.ib()
+    alert_msg = attr.ib()
+    model_type = 'active_monitor_alert'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ActiveMonitorDef:
+    id = attr.ib()
+    name = attr.ib()
+    description = attr.ib()
+    active = attr.ib()
+    cmdline_filename = attr.ib()
+    cmdline_args_tmpl = attr.ib()
+    description_tmpl = attr.ib()
+    args = attr.ib(init=False, default=attr.Factory(list))
+    model_type = 'active_monitor_arg'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ActiveMonitorDefArg:
+    id = attr.ib()
+    active_monitor_def_id = attr.ib()
+    name = attr.ib()
+    display_name = attr.ib()
+    description = attr.ib()
+    required = attr.ib()
+    default_value = attr.ib()
+    model_type = 'active_monitor_def_arg'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ObjectMetadata:
+    object_type = attr.ib()
+    object_id = attr.ib()
+    key = attr.ib()
+    value = attr.ib()
+    model_type = 'object_metadata'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class ObjectBindata:
+    object_type = attr.ib()
+    object_id = attr.ib()
+    key = attr.ib()
+    value = attr.ib()
+    model_type = 'object_bindata'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass
+
+
+@attr.s
+class MonitorGroup:
+    id = attr.ib()
+    parent_id = attr.ib()
+    name = attr.ib()
+    model_type = 'monitor_group'
+
+    def __init__(*args, **kwargs):
+        """This is only here to stop mypy from complaining.
+
+        It will be replaced by the class decorator.
+        """
+        pass

@@ -9,7 +9,7 @@ from typing import Union, Any, Dict, List, cast, Optional, SupportsInt
 from irisett.webapi.errors import InvalidData
 
 
-def require_str(value: Any, convert: bool=False, allow_none: bool=False) -> Optional[str]:
+def require_str(value: Any, convert: bool=False, allow_none: bool=False) -> Any:
     """Make sure a value is a str.
 
     Used when dealing with http input data.
@@ -23,7 +23,7 @@ def require_str(value: Any, convert: bool=False, allow_none: bool=False) -> Opti
     return value
 
 
-def require_bool(value: Optional[Union[bool, str, int]], convert=False, allow_none=False) -> Optional[bool]:
+def require_bool(value: Optional[Union[bool, str, int]], convert=False, allow_none=False) -> Any:
     """Make sure a value is a boolean.
 
     Used when dealing with http input data.
@@ -43,7 +43,7 @@ def require_bool(value: Optional[Union[bool, str, int]], convert=False, allow_no
 
 
 def require_dict(value: Optional[Dict[Any, Any]], key_type: Any=None, value_type: Any=None,
-                 allow_none: bool=False) -> Optional[Dict[str, str]]:
+                 allow_none: bool=False) -> Any:
     """Make sure a value is a Dict[key_type, value_type].
 
     Used when dealing with http input data.
@@ -62,7 +62,7 @@ def require_dict(value: Optional[Dict[Any, Any]], key_type: Any=None, value_type
     return value
 
 
-def require_list(value: Optional[List[Any]], item_type=None, allow_none=False) -> Optional[List[Any]]:
+def require_list(value: Optional[List[Any]], item_type=None, allow_none=False) -> Any:
     """Make sure a value is a List[item_type].
 
     Used when dealing with http input data.
@@ -79,7 +79,7 @@ def require_list(value: Optional[List[Any]], item_type=None, allow_none=False) -
     return value
 
 
-def require_int(value: Optional[Union[SupportsInt, str, bytes]], allow_none=False) -> Optional[int]:
+def require_int(value: Optional[Union[SupportsInt, str, bytes]], allow_none=False) -> Any:
     """Make sure a value is an int.
 
     Used when dealing with http input data.

@@ -5,7 +5,7 @@ as a cosmetic feature, but also to connect multiple monitors to contacts
 without setting the contact(s) for each monitor.
 """
 
-from typing import Optional, Dict, Any, Iterable
+from typing import Optional, Dict, Any, Iterable, Tuple
 from irisett.sql import DBConnection
 from irisett import (
     errors,
@@ -18,6 +18,7 @@ from irisett.object_exists import (
     contact_group_exists,
 )
 
+
 async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], name: str):
     """Add a monitor group to the database."""
     if not name:
@@ -26,7 +27,7 @@ async def create_monitor_group(dbcon: DBConnection, parent_id: Optional[int], na
         if not await monitor_group_exists(dbcon, parent_id):
             raise errors.InvalidArguments('parent monitor group does not exist')
         q = """insert into monitor_groups (parent_id, name) values (%s, %s)"""
-        q_args = (parent_id, name)
+        q_args = (parent_id, name)  # type: Any
     else:
         q = """insert into monitor_groups (name) values (%s)"""
         q_args = (name,)
@@ -173,3 +174,22 @@ async def get_active_monitors_for_monitor_group(dbcon: DBConnection, id: int) ->
             where mon.id=monitor_group_active_monitors.active_monitor_id
             and monitor_group_active_monitors.monitor_group_id=%s"""
     return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q, (id,))]
+
+
+async def get_monitor_groups_for_metadata(
+        dbcon: DBConnection, meta_key: str, meta_value: str) -> Iterable[object_models.MonitorGroup]:
+    q = """select mg.id, mg.parent_id, mg.name
+        from monitor_groups as mg, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="monitor_group" and meta.object_id=mg.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.MonitorGroup(*row) for row in await dbcon.fetch_all(q, q_args)]
+
+
+async def get_active_monitor_metadata_for_monitor_group(
+        dbcon: DBConnection, id: int) -> Iterable[object_models.ObjectMetadata]:
+    q = '''select metadata.object_type, metadata.object_id, metadata.key, metadata.value
+            from monitor_group_active_monitors, object_metadata as metadata
+            where monitor_group_active_monitors.monitor_group_id=%s and
+            metadata.object_id=monitor_group_active_monitors.active_monitor_id
+            and metadata.object_type="active_monitor"'''
+    return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, (id,))]

@@ -23,7 +23,10 @@ from irisett import (
     contact,
     stats,
     event,
+    object_models,
 )
+from irisett.monitor import active_sql
+
 from irisett.metadata import get_metadata
 from irisett.notify.manager import NotificationManager
 from irisett.sql import DBConnection
@@ -39,49 +42,29 @@ async def load_monitor_defs(manager: 'ActiveMonitorManager') -> Dict[int, 'Activ
 
     Return a dict mapping def id to def instance.
     """
-    sql_defs = await _sql_load_monitor_defs(manager.dbcon)
-    await _sql_load_monitor_defs_args(manager.dbcon, sql_defs)
-    cls_defs = {}
-    for def_id, sql_def in sql_defs.items():
-        cls_defs[def_id] = ActiveMonitorDef(
-            def_id, sql_def['name'], sql_def['active'], sql_def['cmdline_filename'],
-            sql_def['cmdline_args_tmpl'], sql_def['description_tmpl'],
-            sql_def['args'], manager)
-    return cls_defs
+    monitor_def_models = await active_sql.get_all_active_monitor_defs(manager.dbcon)
+    monitor_def_args_map = await map_monitor_def_args_to_monitor_defs(manager.dbcon)
+    monitor_defs = {}
+    for monitor_def in monitor_def_models:
+        monitor_defs[monitor_def.id] = ActiveMonitorDef(
+            monitor_def.id, monitor_def.name, monitor_def.active, monitor_def.cmdline_filename,
+            monitor_def.cmdline_args_tmpl, monitor_def.description_tmpl,
+            monitor_def_args_map.get(monitor_def.id, []), manager)
+    return monitor_defs
 
 
-async def _sql_load_monitor_defs(dbcon: DBConnection) -> Dict[int, Dict[str, Any]]:
-    """Load monitor defs from the database.
+async def map_monitor_def_args_to_monitor_defs(
+        dbcon: DBConnection) -> Dict[int, List[object_models.ActiveMonitorDefArg]]:
+    """Get active monitor def args and map them to active monitor defs.
 
-    Returns a dict mapping def it to a dict of def data.
+    List all arguments, return a dict that maps the arguments to monitor def ids.
     """
-    q = """select id, name, active, cmdline_filename, cmdline_args_tmpl, description_tmpl from active_monitor_defs"""
-    rows = await dbcon.fetch_all(q)
-    defs = {}
-    for id, name, active, cmdline_filename, cmdline_args_tmpl, description_tmpl in rows:
-        defs[id] = {
-            'id': id,
-            'name': name,
-            'active': active,
-            'cmdline_filename': cmdline_filename,
-            'cmdline_args_tmpl': cmdline_args_tmpl,
-            'description_tmpl': description_tmpl,
-            'args': []
-        }
-    return defs
-
-
-async def _sql_load_monitor_defs_args(dbcon: DBConnection, defs: Dict[int, Dict[str, Any]]):
-    """Take the output from _sql_load_monitor_defs and add in def arguments."""
-    q = """select id, active_monitor_def_id, name, required, default_value from active_monitor_def_args"""
-    rows = await dbcon.fetch_all(q)
-    for id, def_id, name, required, default_value in rows:
-        defs[def_id]['args'].append({
-            'id': id,
-            'name': name,
-            'required': required,
-            'default_value': default_value,
-        })
+    ret = {}  # type: Dict[int, List[object_models.ActiveMonitorDefArg]]
+    for arg in await active_sql.get_all_active_monitor_def_args(dbcon):
+        if arg.active_monitor_def_id not in ret:
+            ret[arg.active_monitor_def_id] = []
+        ret[arg.active_monitor_def_id].append(arg)
+    return ret
 
 
 async def load_monitors(manager: 'ActiveMonitorManager') -> Dict[int, 'ActiveMonitor']:
@@ -89,53 +72,37 @@ async def load_monitors(manager: 'ActiveMonitorManager') -> Dict[int, 'ActiveMon
 
     Return a dict mapping monitor id to monitor instance.
     """
-    sql_monitors = await _sql_load_monitors(manager.dbcon)
-    await _sql_load_monitor_args(manager.dbcon, sql_monitors)
-    cls_monitors = {}
-    for monitor_id, sql_monitor in sql_monitors.items():
-        monitor_def = manager.monitor_defs[sql_monitor['def_id']]
-        cls_monitors[monitor_id] = ActiveMonitor(
-            monitor_id, sql_monitor['args'],
-            monitor_def,
-            sql_monitor['state'],
-            sql_monitor['state_ts'],
-            sql_monitor['msg'],
-            sql_monitor['alert_id'],
-            sql_monitor['checks_enabled'],
-            sql_monitor['alerts_enabled'],
-            manager)
-    return cls_monitors
-
-
-async def _sql_load_monitors(dbcon: DBConnection) -> Dict[int, Dict[str, Any]]:
-    """Load monitors from the database.
-
-    Returns a dict mapping monitor to a dict of monitor data.
-    """
-    q = """select id, def_id, state, state_ts, msg, alert_id, checks_enabled, alerts_enabled from active_monitors"""
-    rows = await dbcon.fetch_all(q)
+    monitor_models = await active_sql.get_all_active_monitors(manager.dbcon)
+    monitor_args_map = await map_monitor_args_to_monitors(manager.dbcon)
     monitors = {}
-    for id, def_id, state, state_ts, msg, alert_id, checks_enabled, alerts_enabled in rows:
-        monitors[id] = {
-            'id': id,
-            'def_id': def_id,
-            'state': state,
-            'state_ts': state_ts,
-            'msg': msg,
-            'alert_id': alert_id,
-            'checks_enabled': checks_enabled,
-            'alerts_enabled': alerts_enabled,
-            'args': {}
-        }
+    for monitor in monitor_models:
+        monitor_def = manager.monitor_defs[monitor.def_id]
+        monitors[monitor.id] = ActiveMonitor(
+            monitor.id,
+            monitor_args_map.get(monitor.id, {}),
+            monitor_def,
+            monitor.state,
+            monitor.state_ts,
+            monitor.msg,
+            monitor.alert_id,
+            monitor.checks_enabled,
+            monitor.alerts_enabled,
+            manager)
     return monitors
 
 
-async def _sql_load_monitor_args(dbcon: DBConnection, monitors: Dict[int, Dict[str, Any]]):
-    """Take the output from _sql_load_monitors and add in monitor arguments."""
-    q = """select monitor_id, name, value from active_monitor_args"""
-    rows = await dbcon.fetch_all(q)
-    for monitor_id, name, value in rows:
-        monitors[monitor_id]['args'][name] = value
+async def map_monitor_args_to_monitors(
+        dbcon: DBConnection) -> Dict[int, Dict[str, str]]:
+    """Get active monitor args and map them to active monitors.
+
+    List all arguments, return a dict that maps the arguments to monitor ids.
+    """
+    ret = {}  # type: Dict[int, Dict[str, str]]
+    for arg in await active_sql.get_all_active_monitor_args(dbcon):
+        if arg.monitor_id not in ret:
+            ret[arg.monitor_id] = {}
+        ret[arg.monitor_id][arg.name] = arg.value
+    return ret
 
 
 class ActiveMonitorManager:
@@ -286,7 +253,8 @@ class MonitorTemplateCache:
 
 class ActiveMonitorDef(log.LoggingMixin):
     def __init__(self, id: int, name: str, active: bool, cmdline_filename: str, cmdline_args_tmpl: str,
-                 description_tmpl: str, arg_spec: List[Dict[str, str]], manager: ActiveMonitorManager) -> None:
+                 description_tmpl: str, arg_spec: List[object_models.ActiveMonitorDefArg],
+                 manager: ActiveMonitorManager) -> None:
         self.id = id
         self.name = name
         self.active = active
@@ -302,10 +270,10 @@ class ActiveMonitorDef(log.LoggingMixin):
     def __str__(self):
         return '<ActiveMonitorDef(%s/%s)>' % (self.id, self.cmdline_filename)
 
-    def get_arg_with_name(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_arg_with_name(self, name: str) -> Optional[object_models.ActiveMonitorDefArg]:
         match = None
         for arg in self.arg_spec:
-            if arg['name'] == name:
+            if arg.name == name:
                 match = arg
                 break
         return match
@@ -316,7 +284,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         The monitor command line arguments are based on monitor def
         cmdline_args_tmpl template.
         """
-        args = {a['name']: a['default_value'] for a in self.arg_spec}
+        args = {a.name: a.default_value for a in self.arg_spec}
         args.update(monitor_args)
         expanded = self.jinja_cmdline_args.render(**args)
         ret = shlex.split(expanded)  # Supports "" splitting etc.
@@ -331,7 +299,7 @@ class ActiveMonitorDef(log.LoggingMixin):
 
         This is used when sending monitor notifications.
         """
-        args = {a['name']: a['default_value'] for a in self.arg_spec}
+        args = {a.name: a.default_value for a in self.arg_spec}
         args.update(monitor_args)
         description = self.jinja_description_tmpl.render(**args)
         return description
@@ -339,9 +307,9 @@ class ActiveMonitorDef(log.LoggingMixin):
     def validate_monitor_args(self, monitor_args: Dict[str, str], permit_missing: bool = False) -> bool:
         if not permit_missing:
             for arg in self.arg_spec:
-                if arg['required'] and arg['name'] not in monitor_args:
-                    raise errors.InvalidArguments('missing argument %s' % arg['name'])
-        arg_name_set = {a['name'] for a in self.arg_spec}
+                if arg.required and arg.name not in monitor_args:
+                    raise errors.InvalidArguments('missing argument %s' % arg.name)
+        arg_name_set = {a.name for a in self.arg_spec}
         for key, value in monitor_args.items():
             if key not in arg_name_set:
                 raise errors.InvalidArguments('invalid argument %s' % key)
@@ -384,33 +352,24 @@ class ActiveMonitorDef(log.LoggingMixin):
             if monitor.monitor_def.id == self.id:
                 yield monitor
 
-    async def set_arg(self, name: str, display_name: str, description: str, required: bool, default_value: str):
-        arg = self.get_arg_with_name(name)
-        if arg:
-            arg['name'] = name
-            arg['required'] = required
-            arg['default_value'] = default_value
-            await update_monitor_def_arg_in_db(self.manager.dbcon, arg['id'], name,
-                                               display_name, description, required, default_value)
+    async def set_arg(self, new_arg: object_models.ActiveMonitorDefArg):
+        existing_arg = self.get_arg_with_name(new_arg.name)
+        if existing_arg:
+            existing_arg.name = new_arg.name
+            existing_arg.required = new_arg.required
+            existing_arg.default_value = new_arg.default_value
+            await update_monitor_def_arg_in_db(self.manager.dbcon, existing_arg)
         else:
-            arg = {
-                'name': name,
-                'required': required,
-                'default_value': default_value
-            }
-            arg['id'] = await add_monitor_def_arg_to_db(self.manager.dbcon,
-                                                        self.id, name, display_name,
-                                                        description, required, default_value)
-            self.arg_spec.append(arg)
+            new_arg.id = await add_monitor_def_arg_to_db(self.manager.dbcon, new_arg)
+            self.arg_spec.append(new_arg)
         self.tmpl_cache.flush_all()
-        return arg
 
     async def delete_arg(self, name):
         arg = self.get_arg_with_name(name)
         if arg:
             self.arg_spec.remove(arg)
             self.tmpl_cache.flush_all()
-            await delete_monitor_def_arg_from_db(self.manager.dbcon, arg['id'])
+            await delete_monitor_def_arg_from_db(self.manager.dbcon, arg.id)
 
     async def get_notify_data(self):
         q = """select name, description from active_monitor_defs where id=%s"""
@@ -771,6 +730,8 @@ async def remove_monitor_from_db(dbcon: DBConnection, monitor_id: int):
         await cur.execute(q, q_args)
         q = """delete from object_bindata where object_type="active_monitor" and object_id=%s"""
         await cur.execute(q, q_args)
+        q = """delete from active_monitor_groups where active_monitor_id=%s"""
+        await cur.execute(q, q_args)
 
     await dbcon.transact(_run)
 
@@ -824,26 +785,6 @@ async def create_active_monitor_def(manager: ActiveMonitorManager, name: str, de
     return monitor_def
 
 
-async def create_active_monitor_def_arg(manager: ActiveMonitorManager, monitor_def_id: int, name: str,
-                                        display_name: str,
-                                        description: str, required: bool, default_value: str) -> ActiveMonitorDef:
-    monitor_def = manager.monitor_defs[monitor_def_id]
-    q = """insert into active_monitor_def_args
-        (active_monitor_def_id, name, display_name, description, required, default_value)
-        values (%s, %s, %s, %s, %s, %s)"""
-    q_args = (name, display_name, description, required, default_value)
-    arg_id = manager.dbcon.operation(q, q_args)
-    arg = {
-        'id': arg_id,
-        'name': name,
-        'required': required,
-        'default_value': default_value,
-    }  # type: Dict[str, Any]
-    monitor_def.arg_spec.append(arg)
-    log.msg('Created active monitor def arg %s %s=%s' % (monitor_def, name, default_value))
-    return monitor_def
-
-
 async def remove_monitor_def_from_db(dbcon: DBConnection, monitor_def_id: int):
     """Remove all traces of a monitor def from the database."""
 
@@ -857,29 +798,26 @@ async def remove_monitor_def_from_db(dbcon: DBConnection, monitor_def_id: int):
     await dbcon.transact(_run)
 
 
-async def add_monitor_def_arg_to_db(dbcon: DBConnection, monitor_def_id: int, name: str, display_name: str,
-                                    description: str, required: bool, default_value: str) -> int:
+async def add_monitor_def_arg_to_db(
+        dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg) -> int:
     q = """insert into active_monitor_def_args
     (active_monitor_def_id, name, display_name, description, required, default_value)
     values (%s, %s, %s, %s, %s, %s)"""
-    q_args = (monitor_def_id, name, display_name, description, required, default_value)
-    arg_id = await dbcon.operation(q, q_args)
+    arg_id = await dbcon.operation(q, object_models.insert_values(arg))
     return arg_id
 
 
-async def update_monitor_def_arg_in_db(dbcon: DBConnection, arg_id: int, name: str, display_name: str,
-                                       description: str, required: bool, default_value: str):
+async def update_monitor_def_arg_in_db(dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg):
     q = """update active_monitor_def_args
         set name=%s, display_name=%s, description=%s, required=%s, default_value=%s
         where id=%s"""
-    q_args = (name, display_name, description, required, default_value, arg_id)
+    q_args = (arg.name, arg.display_name, arg.description, arg.required, arg.default_value, arg.id)
     await dbcon.operation(q, q_args)
 
 
 async def delete_monitor_def_arg_from_db(dbcon: DBConnection, arg_id: int):
     q = """delete from active_monitor_def_args where id=%s"""
-    q_args = (arg_id,)
-    await dbcon.operation(q, q_args)
+    await dbcon.operation(q, (arg_id,))
 
 
 def get_monitor_def_by_name(manager: ActiveMonitorManager, name: str) -> Optional[ActiveMonitorDef]:

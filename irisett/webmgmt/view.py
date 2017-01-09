@@ -16,6 +16,8 @@ from irisett import (
     monitor_group,
 )
 
+from irisett.monitor import active_sql
+
 from irisett.webmgmt import (
     errors,
     ws_event_proxy,
@@ -121,7 +123,7 @@ class DisplayActiveMonitorView(web.View):
             'section': 'active_monitors',
             'notification_msg': self.request.rel_url.query.get('notification_msg'),
             'monitor': monitor,
-            'metadata': await metadata.get_metadata(self.request.app['dbcon'], 'active_monitor', monitor_id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'active_monitor', monitor_id),
             'contacts': await contact.get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id),
         }
         return context
@@ -146,78 +148,33 @@ async def send_active_monitor_test_notification(request):
     return web.HTTPFound('/active_monitor/%s/?notification_msg=Notification sent' % monitor_id)
 
 
-def parse_active_monitor_def_row(row):
-    """Parse an SQL row for an active monitor def."""
-    ret = {
-        'id': row[0],
-        'name': row[1],
-        'description': row[2],
-        'active': row[3],
-        'cmdline_filename': row[4],
-        'cmdline_args_tmpl': row[5],
-        'description_tmpl': row[6],
-    }
-    return ret
-
-
 class ListActiveMonitorDefsView(web.View):
     @aiohttp_jinja2.template('list_active_monitor_defs.html')
     async def get(self) -> Dict[str, Any]:
         context = {
             'section': 'active_monitor_defs',
-            'monitor_defs': await self._get_active_monitor_defs(),
+            'monitor_defs': await active_sql.get_all_active_monitor_defs(self.request.app['dbcon']),
         }
         return context
-
-    async def _get_active_monitor_defs(self):
-        q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs'''
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        ret = []
-        for row in rows:
-            active_monitor_def = parse_active_monitor_def_row(row)
-            ret.append(active_monitor_def)
-        return ret
 
 
 class DisplayActiveMonitorDefView(web.View):
     @aiohttp_jinja2.template('display_active_monitor_def.html')
     async def get(self) -> Dict[str, Any]:
+        dbcon = self.request.app['dbcon']
         monitor_def_id = int(self.request.match_info['id'])
         am_manager = self.request.app['active_monitor_manager']
         monitor_def = am_manager.monitor_defs[monitor_def_id]
-        sql_monitor_def = await self._get_active_monitor_def(monitor_def_id)
+        sql_monitor_def = await active_sql.get_active_monitor_def(dbcon, monitor_def_id)
+        if not sql_monitor_def:
+            raise errors.NotFound()
+        sql_monitor_def.args = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         context = {
             'section': 'active_monitor_def',
             'monitor_def': monitor_def,
             'sql_monitor_def': sql_monitor_def,
         }
         return context
-
-    async def _get_active_monitor_def(self, monitor_def_id):
-        q = '''select id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs where id=%s'''
-        row = await self.request.app['dbcon'].fetch_row(q, (monitor_def_id,))
-        ret = parse_active_monitor_def_row(row)
-        ret['args'] = await self._get_active_monitor_def_args(monitor_def_id)
-        return ret
-
-    async def _get_active_monitor_def_args(self, monitor_def_id):
-        q = '''select id, name, display_name, description, required, default_value
-            from active_monitor_def_args where active_monitor_def_id=%s'''
-        rows = await self.request.app['dbcon'].fetch_all(q, (monitor_def_id,))
-        ret = []
-        for row in rows:
-            arg = {
-                'id': row[0],
-                'name': row[1],
-                'display_name': row[2],
-                'description': row[3],
-                'required': row[4],
-                'default_value': row[5],
-            }
-            ret.append(arg)
-        return ret
 
 
 class ListContactsView(web.View):
@@ -241,6 +198,7 @@ class DisplayContactView(web.View):
             'section': 'contacts',
             'subsection': 'contacts',
             'contact': c,
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'contact', c.id)
         }
         return context
 
@@ -267,7 +225,9 @@ class DisplayContactGroupView(web.View):
             'section': 'contacts',
             'subsection': 'groups',
             'contact_group': contact_group,
-            'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id)
+            'contacts': await contact.get_contacts_for_contact_group(dbcon, contact_group.id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'contact_group',
+                                                               contact_group.id),
         }
         return context
 
@@ -294,7 +254,8 @@ class DisplayMonitorGroupView(web.View):
             'monitor_group': mg,
             'contacts': await monitor_group.get_contacts_for_monitor_group(dbcon, mg.id),
             'contact_groups': await monitor_group.get_contact_groups_for_monitor_group(dbcon, mg.id),
-            'active_monitors': await self._get_active_monitors(dbcon, mg.id)
+            'active_monitors': await self._get_active_monitors(dbcon, mg.id),
+            'metadata': await metadata.get_metadata_for_object(self.request.app['dbcon'], 'monitor_group', mg.id),
         }
         return context
 

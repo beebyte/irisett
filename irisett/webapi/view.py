@@ -9,7 +9,9 @@ from irisett import (
     bindata,
     stats,
     utils,
+    contact,
     monitor_group,
+    object_models,
 )
 from irisett.webapi import (
     errors,
@@ -21,6 +23,8 @@ from irisett.monitor.active import (
     create_active_monitor_def,
     get_monitor_def_by_name,
 )
+from irisett.monitor import active_sql
+from irisett.sql import DBConnection
 from irisett.contact import (
     create_contact,
     update_contact,
@@ -65,49 +69,82 @@ def get_request_param(request: web.Request, name: str, error_if_missing: bool = 
     return ret
 
 
+def apply_metadata_to_model_list(
+        model_list: Iterable[Any], metadata_list: Iterable[object_models.ObjectMetadata]) -> List[Any]:
+    """Take a list of model objects and add metadata to them.
+
+    This is a commonly used pattern in object get views.
+    """
+    model_dict = {model.id: object_models.asdict(model) for model in model_list}
+    for model in model_dict.values():
+        model['metadata'] = {}
+    for metadata_obj in metadata_list:
+        model = model_dict.get(metadata_obj.object_id)
+        if model:
+            model['metadata'][metadata_obj.key] = metadata_obj.value
+    return list(model_dict.values())
+
+
 class ActiveMonitorView(web.View):
     async def get(self) -> web.Response:
-        if 'id' in self.request.rel_url.query:
-            ids = [require_int(cast(str, get_request_param(self.request, 'id')))]
-        elif 'meta_key' in self.request.rel_url.query:
-            q = """select mon.id
-                from active_monitors as mon, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="active_monitor" and meta.object_id=mon.id"""
-            meta_key = require_str(get_request_param(self.request, 'meta_key'))
-            meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q_args = (meta_key, meta_value)
-            res = await self.request.app['dbcon'].fetch_all(q, q_args)
-            ids = [n[0] for n in res]
-        elif 'monitor_group_id' in self.request.rel_url.query:
-            q = """select monitors.id from active_monitors as monitors
-                left join monitor_group_active_monitors on monitor_group_active_monitors.active_monitor_id=monitors.id
-                left join monitor_groups on monitor_groups.id=monitor_group_active_monitors.monitor_group_id
-                where monitor_groups.id=%s"""
-            monitor_group_id = require_str(get_request_param(self.request, 'monitor_group_id'))
-            q_args = (monitor_group_id,)
-            res = await self.request.app['dbcon'].fetch_all(q, q_args)
-            ids = [n[0] for n in res]
-        else:
-            q = """select id from active_monitors"""
-            res = await self.request.app['dbcon'].fetch_all(q)
-            ids = [n[0] for n in res]
-        include_metadata = require_bool(
-            get_request_param(self.request, 'include_metadata', error_if_missing=False),
-            convert=True) or False
-        include_alerts = require_bool(
-            get_request_param(self.request, 'include_alerts', error_if_missing=False),
-            convert=True) or False
+        dbcon = self.request.app['dbcon']
+        monitor_ids = await self._get_monitor_ids(dbcon)
+        metadata_dict = await self._get_monitor_metadata(dbcon)
         monitors = []
-        for monitor_id in ids:
+        for monitor_id in monitor_ids:
             monitor = self.request.app['active_monitor_manager'].monitors.get(monitor_id, None)
             if not monitor:
                 continue
-            data = await self._collect_monitor_data(monitor, include_metadata, include_alerts)
+            data = self._collect_monitor_data(monitor, metadata_dict)
             monitors.append(data)
         return web.json_response(monitors)
 
-    async def _collect_monitor_data(self, monitor: ActiveMonitor,
-                                    include_metadata: bool, include_alerts: bool) -> Dict[str, Any]:
+    async def _get_monitor_ids(self, dbcon: DBConnection) -> List[int]:
+        if 'id' in self.request.rel_url.query:
+            ids = [require_int(cast(str, get_request_param(self.request, 'id')))]
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            active_monitor_models = await active_sql.get_active_monitors_for_metadata(dbcon, meta_key, meta_value)
+            ids = [monitor.id for monitor in active_monitor_models]
+        elif 'monitor_group_id' in self.request.rel_url.query:
+            monitor_group_id = require_int(get_request_param(self.request, 'monitor_group_id'))
+            active_monitor_models = await monitor_group.get_active_monitors_for_monitor_group(dbcon, monitor_group_id)
+            ids = [monitor.id for monitor in active_monitor_models]
+        else:
+            active_monitor_models = await active_sql.get_all_active_monitors(dbcon)
+            ids = [monitor.id for monitor in active_monitor_models]
+        return ids
+
+    async def _get_monitor_metadata(self, dbcon: DBConnection) -> Optional[Dict[int, Dict[str, str]]]:
+        include_metadata = require_bool(
+            get_request_param(self.request, 'include_metadata', error_if_missing=False),
+            convert=True) or False
+        if not include_metadata:
+            return None
+        if 'id' in self.request.rel_url.query:
+            metadata_models = await metadata.get_metadata_for_object(
+                dbcon, 'active_monitor', require_int(cast(str, get_request_param(self.request, 'id'))))
+        elif 'meta_key' in self.request.rel_url.query:
+            meta_key = require_str(get_request_param(self.request, 'meta_key'))
+            meta_value = require_str(get_request_param(self.request, 'meta_value'))
+            metadata_models = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'active_monitor', 'active_monitors')
+        elif 'monitor_group_id' in self.request.rel_url.query:
+            metadata_models = await monitor_group.get_active_monitor_metadata_for_monitor_group(
+                dbcon, require_int(cast(str, get_request_param(self.request, 'monitor_group_id'))))
+        else:
+            metadata_models = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor')
+        metadata_dict = {}  # type: Dict[int, Dict[str, str]]
+        for metadata_model in metadata_models:
+            if metadata_model.object_id not in metadata_dict:
+                metadata_dict[metadata_model.object_id] = {}
+            metadata_dict[metadata_model.object_id][metadata_model.key] = metadata_model.value
+        return metadata_dict
+
+    @staticmethod
+    def _collect_monitor_data(monitor: ActiveMonitor,
+                              metadata_dict: Optional[Dict[int, Dict[str, str]]]) -> Dict[str, Any]:
         ret = {
             'id': monitor.id,
             'state': monitor.state,
@@ -129,21 +166,11 @@ class ActiveMonitorView(web.View):
                 'cmdline_filename': monitor.monitor_def.cmdline_filename,
                 'cmdline_args_tmpl': monitor.monitor_def.cmdline_args_tmpl,
                 'description_tmpl': monitor.monitor_def.description_tmpl,
-                'arg_spec': monitor.monitor_def.arg_spec,
+                'arg_spec': object_models.list_asdict(monitor.monitor_def.arg_spec),
             },
         }
-        if include_metadata:
-            ret['metadata'] = await monitor.get_metadata()
-        if include_alerts:
-            ret['alerts'] = await self._get_monitor_alerts(monitor.id)
-        return ret
-
-    async def _get_monitor_alerts(self, monitor_id):
-        q = """select id, start_ts, end_ts, alert_msg
-            from active_monitor_alerts where monitor_id=%s
-            order by start_ts"""
-        q_args = (monitor_id,)
-        ret = await self.request.app['dbcon'].fetch_all(q, q_args)
+        if metadata_dict is not None:
+            ret['metadata'] = metadata_dict.get(monitor.id, {})
         return ret
 
     async def post(self):
@@ -285,9 +312,12 @@ class ActiveMonitorContactView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
         if 'include_all' in self.request.rel_url.query:
-            ret = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            contacts = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         else:
-            ret = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            contacts = object_models.asdict(
+                await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
+            )
+        ret = object_models.list_asdict(contacts)
         return web.json_response(ret)
 
     async def post(self) -> web.Response:
@@ -319,7 +349,7 @@ class ActiveMonitorContactGroupView(web.View):
     async def get(self) -> web.Response:
         monitor_id = cast(int, require_int(get_request_param(self.request, 'monitor_id')))
         ret = await get_contact_groups_for_active_monitor(self.request.app['dbcon'], monitor_id)
-        return web.json_response(ret)
+        return web.json_response(object_models.list_asdict(ret))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
@@ -348,63 +378,32 @@ class ActiveMonitorContactGroupView(web.View):
 
 class ActiveMonitorDefView(web.View):
     async def get(self) -> web.Response:
+        dbcon = self.request.app['dbcon']
         if 'id' in self.request.rel_url.query:
-            ret = await self.get_monitor_def()
+            monitor_def_id = require_int(get_request_param(self.request, 'id'))
+            monitor_def_item = await active_sql.get_active_monitor_def(dbcon, monitor_def_id)
+            monitor_def_list = []  # type: Iterable[object_models.ActiveMonitorDef]
+            if monitor_def_item:
+                monitor_def_list = [monitor_def_item]
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'active_monitor_def', monitor_def_id)
+            arg_list = await active_sql.get_active_monitor_def_args_for_def(dbcon, monitor_def_id)
         else:
-            ret = await self.list_monitor_defs()
-        return ret
-
-    async def get_monitor_def(self):
-        monitor_def = self._get_request_monitor_def(self.request)
-        q_args = (monitor_def.id,)
-        q = """select
-            id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs where id=%s"""
-        rows = await self.request.app['dbcon'].fetch_all(q, q_args)
-        monitor_def = self._make_monitor_def_from_row(rows[0])
-        q = """select
-            id, active_monitor_def_id, name, display_name, description, required, default_value
-            from active_monitor_def_args where active_monitor_def_id=%s"""
-        rows = await self.request.app['dbcon'].fetch_all(q, q_args)
-        for row in rows:
-            arg = self._make_monitor_def_arg_from_row(row)
-            monitor_def['arg_def'].append(arg)
-        return web.json_response([monitor_def])
-
-    async def list_monitor_defs(self):
-        q = """select
-            id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl
-            from active_monitor_defs"""
-        defs = []
-        def_dict = {}
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        for row in rows:
-            monitor_def = self._make_monitor_def_from_row(row)
-            defs.append(monitor_def)
-            def_dict[monitor_def['id']] = monitor_def
-        q = """select
-            id, active_monitor_def_id, name, display_name, description, required, default_value
-            from active_monitor_def_args"""
-        rows = await self.request.app['dbcon'].fetch_all(q)
-        for row in rows:
-            arg = self._make_monitor_def_arg_from_row(row)
-            def_dict[row[1]]['arg_def'].append(arg)
-        return web.json_response([defs])
-
-    # noinspection PyMethodMayBeStatic
-    def _make_monitor_def_from_row(self, row):
-        id, name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl = row
-        monitor_def = {
-            'id': id,
-            'name': name,
-            'description': description,
-            'active': active,
-            'cmdline_filename': cmdline_filename,
-            'cmdline_args_tmpl': cmdline_args_tmpl,
-            'description_tmpl': description_tmpl,
-            'arg_def': []
-        }
-        return monitor_def
+            monitor_def_list = await active_sql.get_all_active_monitor_defs(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor_def')
+            arg_list = await active_sql.get_all_active_monitor_def_args(dbcon)
+        monitor_def_dict = {item.id: object_models.asdict(item) for item in monitor_def_list}
+        for monitor_def in monitor_def_dict.values():
+            monitor_def['metadata'] = {}
+            monitor_def['arg_def'] = []
+        for arg in arg_list:
+            monitor_def = monitor_def_dict.get(arg.active_monitor_def_id)
+            if monitor_def:
+                monitor_def['arg_def'].append(object_models.asdict(arg))
+        for metadata_obj in metadata_list:
+            monitor_def = monitor_def_dict.get(metadata_obj.object_id)
+            if monitor_def:
+                monitor_def['metadata'][metadata_obj.key] = metadata_obj.value
+        return web.json_response(list(monitor_def_dict.values()))
 
     # noinspection PyMethodMayBeStatic
     def _make_monitor_def_arg_from_row(self, row):
@@ -457,12 +456,15 @@ class ActiveMonitorDefArgView(web.View):
     async def put(self) -> web.Response:
         request_data = await self.request.json()
         monitor_def = self._get_request_monitor_def(self.request)
-        await monitor_def.set_arg(
-            cast(str, require_str(request_data['name'])),
-            cast(str, require_str(request_data['display_name'])),
-            cast(str, require_str(request_data['description'])),
-            cast(bool, require_bool(request_data['required'])),
-            cast(str, require_str(request_data['default_value'])))
+        monitor_def.set_arg(object_models.ActiveMonitorDefArg(
+            id=0,
+            active_monitor_def_id=monitor_def.id,
+            name=cast(str, require_str(request_data['name'])),
+            display_name=cast(str, require_str(request_data['display_name'])),
+            description=cast(str, require_str(request_data['description'])),
+            required=cast(bool, require_bool(request_data['required'])),
+            default_value=cast(str, require_str(request_data['default_value'])),
+        ))
         return web.json_response(True)
 
     async def delete(self) -> web.Response:
@@ -483,54 +485,23 @@ class ActiveMonitorDefArgView(web.View):
 class ContactView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             contact_id = require_int(get_request_param(self.request, 'id'))
-            q = """select id, name, email, phone, active from contacts where id=%s"""
-            q_args = (contact_id,)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contacts
-                where contacts.id=%s and meta.object_type="contact" and meta.object_id=contacts.id"""
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            c = await contact.get_contact(dbcon, contact_id)
+            contact_list = []  # type: Iterable[object_models.Contact]
+            if c:
+                contact_list = [c]
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact', contact_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q = """select c.id, c.name, c.email, c.phone, c.active
-                from contacts as c, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="contact" and meta.object_id=c.id"""
-            q_args = (meta_key, meta_value)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select m2.object_id, m2.key, m2.value
-                        from object_metadata as m1
-                        left join contacts on contacts.id=m1.object_id
-                        left join object_metadata as m2 on m2.object_id=contacts.id
-                        where m1.key=%s and m1.value=%s and m2.object_type="contact"
-            """
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_list = await contact.get_contacts_for_metadata(dbcon, meta_key, meta_value)
+            metadata_list = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'contact', 'contacts')
         else:
-            q = """select id, name, email, phone, active from contacts"""
-            rows = await dbcon.fetch_all(q)
-            meta_q = '''select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contacts
-                where meta.object_id=contacts.id and meta.object_type="contact"'''
-            meta_rows = await dbcon.fetch_all(meta_q)
-        contacts = {}
-        for id, name, email, phone, active in rows:
-            contact = {
-                'id': id,
-                'name': name,
-                'email': email,
-                'phone': phone,
-                'active': active,
-                'metadata': {}
-            }
-            contacts[id] = contact
-        for id, key, value in meta_rows:
-            if id in contacts:
-                contacts[id]['metadata'][key] = value
-        return web.json_response(list(contacts.values()))
+            contact_list = await contact.get_all_contacts(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'contact')
+        return web.json_response(apply_metadata_to_model_list(contact_list, metadata_list))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
@@ -560,52 +531,23 @@ class ContactView(web.View):
 class ContactGroupView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             contact_group_id = require_int(get_request_param(self.request, 'id'))
-            q = """select id, name, active from contact_groups where id=%s"""
-            q_args = (contact_group_id,)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contact_groups
-                where contact_groups.id=%s and meta.object_type="contact_group" and meta.object_id=contact_groups.id"""
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_group_item = await contact.get_contact_group(dbcon, contact_group_id)
+            contact_group_list = []  # type: Iterable[object_models.ContactGroup]
+            if contact_group_item:
+                contact_group_list = [contact_group_item]
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'contact_group', contact_group_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q = """select c.id, c.name, c.active
-                from contact_groups as c, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=c.id"""
-            q_args = (meta_key, meta_value)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select m2.object_id, m2.key, m2.value
-                        from object_metadata as m1
-                        left join contact_groups on contact_groups.id=m1.object_id
-                        left join object_metadata as m2 on m2.object_id=contact_groups.id
-                        where m1.key=%s and m1.value=%s and m2.object_type="contact_group"
-            """
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            contact_group_list = await contact.get_contact_groups_for_metadata(dbcon, meta_key, meta_value)
+            metadata_list = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'contact_group', 'contact_groups')
         else:
-            q = """select id, name, active from contact_groups"""
-            rows = await dbcon.fetch_all(q)
-            meta_q = '''select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, contact_groups
-                where meta.object_id=contact_groups.id and meta.object_type="contact_group"'''
-            meta_rows = await dbcon.fetch_all(meta_q)
-        contacts = {}
-        for id, name, active in rows:
-            contact = {
-                'id': id,
-                'name': name,
-                'active': active,
-                'metadata': {}
-            }
-            contacts[id] = contact
-        for id, key, value in meta_rows:
-            if id in contacts:
-                contacts[id]['metadata'][key] = value
-        return web.json_response(list(contacts.values()))
+            contact_group_list = await contact.get_all_contact_groups(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'monitor_group')
+        return web.json_response(apply_metadata_to_model_list(contact_group_list, metadata_list))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
@@ -634,7 +576,7 @@ class ContactGroupContactView(web.View):
     async def get(self) -> web.Response:
         contact_group_id = cast(int, require_int(get_request_param(self.request, 'contact_group_id')))
         ret = await get_contacts_for_contact_group(self.request.app['dbcon'], contact_group_id)
-        return web.json_response(ret)
+        return web.json_response(object_models.list_asdict(ret))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
@@ -664,52 +606,23 @@ class ContactGroupContactView(web.View):
 class MonitorGroupView(web.View):
     async def get(self) -> web.Response:
         dbcon = self.request.app['dbcon']
-        # noinspection PyUnusedLocal
-        q_args = ()  # type: Tuple
         if 'id' in self.request.rel_url.query:
             monitor_group_id = require_int(get_request_param(self.request, 'id'))
-            q = """select id, parent_id, name from monitor_groups where id=%s"""
-            q_args = (monitor_group_id,)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, monitor_groups
-                where monitor_groups.id=%s and meta.object_type="monitor_group" and meta.object_id=monitor_group.id"""
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            monitor_group_item = await monitor_group.get_monitor_group(dbcon, monitor_group_id)
+            monitor_group_list = []  # type: Iterable[object_models.MonitorGroup]
+            if monitor_group_item:
+                monitor_group_list = [monitor_group_item]
+            metadata_list = await metadata.get_metadata_for_object(dbcon, 'monitor_group', monitor_group_id)
         elif 'meta_key' in self.request.rel_url.query:
             meta_key = require_str(get_request_param(self.request, 'meta_key'))
             meta_value = require_str(get_request_param(self.request, 'meta_value'))
-            q = """select mg.id, mg.parent_id, mg.name
-                from monitor_groups as mg, object_metadata as meta
-                where meta.key=%s and meta.value=%s and meta.object_type="monitor_group" and meta.object_id=mg.id"""
-            q_args = (meta_key, meta_value)
-            rows = await dbcon.fetch_all(q, q_args)
-            meta_q = """select m2.object_id, m2.key, m2.value
-                        from object_metadata as m1
-                        left join monitor_groups on monitor_groups.id=m1.object_id
-                        left join object_metadata as m2 on m2.object_id=contacts.id
-                        where m1.key=%s and m1.value=%s and m2.object_type="monitor_group"
-            """
-            meta_rows = await dbcon.fetch_all(meta_q, q_args)
+            monitor_group_list = await monitor_group.get_monitor_groups_for_metadata(dbcon, meta_key, meta_value)
+            metadata_list = await metadata.get_metadata_for_object_metadata(
+                dbcon, meta_key, meta_value, 'monitor_group', 'monitor_groups')
         else:
-            q = """select id, parent_id, name from monitor_groups"""
-            rows = await dbcon.fetch_all(q)
-            meta_q = '''select meta.object_id, meta.key, meta.value
-                from object_metadata as meta, monitor_groups
-                where meta.object_id=monitor_groups.id and meta.object_type="monitor_group"'''
-            meta_rows = await dbcon.fetch_all(meta_q)
-        monitor_groups = {}
-        for id, parent_id, name in rows:
-            monitor_group = {
-                'id': id,
-                'parent_id': parent_id,
-                'name': name,
-                'metadata': {}
-            }
-            monitor_groups[id] = monitor_group
-        for id, key, value in meta_rows:
-            if id in monitor_groups:
-                monitor_groups[id]['metadata'][key] = value
-        return web.json_response(list(monitor_groups.values()))
+            monitor_group_list = await monitor_group.get_all_monitor_groups(dbcon)
+            metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'monitor_group')
+        return web.json_response(apply_metadata_to_model_list(monitor_group_list, metadata_list))
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()

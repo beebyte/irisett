@@ -9,7 +9,7 @@ Contacts are only stored in the database and not in memory, they are loaded
 from the database each time an alert is sent.
 """
 
-from typing import Dict, Iterable, Optional, Any
+from typing import Dict, Iterable, Optional, Any, Set
 from irisett.sql import DBConnection
 from irisett import (
     errors,
@@ -94,48 +94,34 @@ async def delete_contact_group(dbcon: DBConnection, contact_group_id: int):
     await dbcon.operation(q, (contact_group_id,))
 
 
-async def get_all_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, Any]]:
+async def get_all_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[object_models.Contact]:
     """Get a list of all contacts for an active monitor.
 
     This includes directly attached contacts, contacts from contact groups,
     monitor groups etc.
     """
-    contacts = {}  # type: Dict[int, Dict[str, Any]]
+    contacts = set()
     contacts.update(await _active_monitor_contacts(dbcon, monitor_id))
     contacts.update(await _active_monitor_contact_groups(dbcon, monitor_id))
     contacts.update(await _active_monitor_monitor_group_contacts(dbcon, monitor_id))
     contacts.update(await _active_monitor_monitor_group_contact_groups(dbcon, monitor_id))
-    return list(contacts.values())
+    return list(contacts)
 
 
-async def _run_active_monitor_get_contacts_query(
-        dbcon: DBConnection, query: str, query_args: Any) -> Dict[int, Dict[str, Any]]:
-    """Run query and parse results for querys that fetch contacts."""
-    rows = await dbcon.fetch_all(query, query_args)
-    contacts = {}
-    for id, email, phone in rows:
-        contacts[id] = {
-            'id': id,
-            'email': email,
-            'phone': phone,
-        }
-    return contacts
-
-
-async def _active_monitor_contacts(dbcon: DBConnection, monitor_id: int) -> Dict[int, Dict[str, Any]]:
+async def _active_monitor_contacts(dbcon: DBConnection, monitor_id: int) -> Set[object_models.Contact]:
     # Get contacts directly connected to the monitor.
     q = """select
-        contacts.id, contacts.email, contacts.phone
+        contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from active_monitor_contacts, contacts
         where active_monitor_contacts.active_monitor_id = %s
         and active_monitor_contacts.contact_id = contacts.id
         and contacts.active = true"""
-    return await _run_active_monitor_get_contacts_query(dbcon, q, (monitor_id,))
+    return {object_models.Contact(*row) for row in await dbcon.fetch_all(q, (monitor_id,))}
 
 
-async def _active_monitor_contact_groups(dbcon: DBConnection, monitor_id: int) -> Dict[int, Dict[str, Any]]:
+async def _active_monitor_contact_groups(dbcon: DBConnection, monitor_id: int) -> Set[object_models.Contact]:
     # Get contacts connected to the monitor via a contact group.
-    q = """select contacts.id, contacts.email, contacts.phone
+    q = """select contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from active_monitor_contact_groups, contact_groups, contact_group_contacts, contacts
         where active_monitor_contact_groups.active_monitor_id = %s
         and active_monitor_contact_groups.contact_group_id = contact_groups.id
@@ -143,24 +129,24 @@ async def _active_monitor_contact_groups(dbcon: DBConnection, monitor_id: int) -
         and contact_groups.id = contact_group_contacts.contact_group_id
         and contact_group_contacts.contact_id = contacts.id
         and contacts.active = true"""
-    return await _run_active_monitor_get_contacts_query(dbcon, q, (monitor_id,))
+    return {object_models.Contact(*row) for row in await dbcon.fetch_all(q, (monitor_id,))}
 
 
-async def _active_monitor_monitor_group_contacts(dbcon: DBConnection, monitor_id: int) -> Dict[int, Dict[str, Any]]:
+async def _active_monitor_monitor_group_contacts(dbcon: DBConnection, monitor_id: int) -> Set[object_models.Contact]:
     # Get contacts connected to the monitor via monitor group -> contacts
-    q = """select contacts.id, contacts.email, contacts.phone
+    q = """select contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from monitor_group_active_monitors
         left join monitor_groups on monitor_group_active_monitors.monitor_group_id=monitor_groups.id
         left join monitor_group_contacts on monitor_group_contacts.monitor_group_id=monitor_groups.id
         left join contacts on contacts.id=monitor_group_contacts.contact_id
         where monitor_group_active_monitors.active_monitor_id=%s and contacts.active = true"""
-    return await _run_active_monitor_get_contacts_query(dbcon, q, (monitor_id,))
+    return {object_models.Contact(*row) for row in await dbcon.fetch_all(q, (monitor_id,))}
 
 
 async def _active_monitor_monitor_group_contact_groups(
-        dbcon: DBConnection, monitor_id: int) -> Dict[int, Dict[str, Any]]:
+        dbcon: DBConnection, monitor_id: int) -> Set[object_models.Contact]:
     # Get contacts connected to the monitor via monitor group -> contact group -> contacts
-    q = """select contacts.id, contacts.email, contacts.phone
+    q = """select contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from monitor_group_active_monitors
         left join monitor_groups on monitor_group_active_monitors.monitor_group_id=monitor_groups.id
         left join monitor_group_contact_groups on monitor_group_contact_groups.monitor_group_id=monitor_groups.id
@@ -170,7 +156,7 @@ async def _active_monitor_monitor_group_contact_groups(
         where monitor_group_active_monitors.active_monitor_id=%s
         and contact_groups.active=true
         and contacts.active=true"""
-    return await _run_active_monitor_get_contacts_query(dbcon, q, (monitor_id,))
+    return {object_models.Contact(*row) for row in await dbcon.fetch_all(q, (monitor_id,))}
 
 
 async def get_contact_dict_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Dict[str, set]:
@@ -183,12 +169,12 @@ async def get_contact_dict_for_active_monitor(dbcon: DBConnection, monitor_id: i
         'phone': set(),
     }  # type: Dict[str, set]
 
-    contacts = await get_contacts_for_active_monitor(dbcon, monitor_id)
+    contacts = await get_all_contacts_for_active_monitor(dbcon, monitor_id)
     for contact in contacts:
-        if contact['email']:
-            ret['email'].add(contact['email'])
-        if contact['phone']:
-            ret['phone'].add(contact['phone'])
+        if contact.email:
+            ret['email'].add(contact.email)
+        if contact.phone:
+            ret['phone'].add(contact.phone)
     return ret
 
 
@@ -231,7 +217,7 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
     await dbcon.transact(_run)
 
 
-async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, str]]:
+async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[object_models.Contact]:
     """Get contacts for an active monitor.
 
     Return a list of dicts, one dict describing each contacts information.
@@ -241,17 +227,7 @@ async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) 
         from active_monitor_contacts, contacts
         where active_monitor_contacts.active_monitor_id = %s
         and active_monitor_contacts.contact_id = contacts.id"""
-    q_args = (monitor_id,)
-    rows = await dbcon.fetch_all(q, q_args)
-    contacts = []
-    for id, name, email, phone, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        })
+    contacts = [object_models.Contact(*row) for row in await dbcon.fetch_all(q, (monitor_id,))]
     return contacts
 
 
@@ -274,7 +250,7 @@ async def delete_contact_group_from_active_monitor(dbcon: DBConnection, contact_
 
 
 async def set_active_monitor_contact_groups(dbcon: DBConnection,
-                                      contact_group_ids: Iterable[int], monitor_id: int):
+                                            contact_group_ids: Iterable[int], monitor_id: int):
     """(Re-)set contact_groups for an active monitor.
 
     Delete existing contact groups for an active monitor and set the given new
@@ -294,66 +270,40 @@ async def set_active_monitor_contact_groups(dbcon: DBConnection,
     await dbcon.transact(_run)
 
 
-async def get_contact_groups_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[Dict[str, str]]:
-    """Get contact groups for an active monitor.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_contact_groups_for_active_monitor(
+        dbcon: DBConnection, monitor_id: int) -> Iterable[object_models.ContactGroup]:
+    """Get contact groups for an active monitor."""
     q = """select
         contact_groups.id, contact_groups.name, contact_groups.active
         from active_monitor_contact_groups, contact_groups
         where active_monitor_contact_groups.active_monitor_id = %s
         and active_monitor_contact_groups.contact_group_id = contact_groups.id"""
-    q_args = (monitor_id,)
-    rows = await dbcon.fetch_all(q, q_args)
-    contacts = []
-    for id, name, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'active': active
-        })
-    return contacts
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, (monitor_id,))]
 
 
-async def get_all_contacts(dbcon: DBConnection) -> Iterable[Dict[str, str]]:
-    """Get all contacts
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_all_contacts(dbcon: DBConnection) -> Iterable[object_models.Contact]:
+    """Get all contacts"""
     q = """select id, name, email, phone, active from contacts"""
-    rows = await dbcon.fetch_all(q)
-    contacts = []
-    for id, name, email, phone, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        })
-    return contacts
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q)]
 
 
 async def get_contact(dbcon: DBConnection, id: int) -> Any:  # Use any because optional returns suck.
-    """Get a single contact if it exists.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+    """Get a single contact if it exists."""
     q = """select id, name, email, phone, active from contacts where id=%s"""
     q_args = (id,)
     row = await dbcon.fetch_row(q, q_args)
     contact = None
     if row:
-        id, name, email, phone, active = row
-        contact = {
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        }
+        contact = object_models.Contact(*row)
     return contact
+
+
+async def get_contacts_for_metadata(dbcon: DBConnection, meta_key: str, meta_value: str):
+    q = """select c.id, c.name, c.email, c.phone, c.active
+        from contacts as c, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="contact" and meta.object_id=c.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, q_args)]
 
 
 async def add_contact_to_contact_group(dbcon: DBConnection, contact_group_id: int, contact_id: int):
@@ -395,28 +345,14 @@ async def set_contact_group_contacts(dbcon: DBConnection,
     await dbcon.transact(_run)
 
 
-async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[Dict[str, str]]:
-    """Get contacts for a contact group.
-
-    Return a list of dicts, one dict describing each contacts information.
-    """
+async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[object_models.Contact]:
+    """Get contacts for a contact group."""
     q = """select
         contacts.id, contacts.name, contacts.email, contacts.phone, contacts.active
         from contact_group_contacts, contacts
         where contact_group_contacts.contact_group_id = %s
         and contact_group_contacts.contact_id = contacts.id"""
-    q_args = (contact_group_id,)
-    rows = await dbcon.fetch_all(q, q_args)
-    contacts = []
-    for id, name, email, phone, active in rows:
-        contacts.append({
-            'id': id,
-            'name': name,
-            'email': email,
-            'phone': phone,
-            'active': active
-        })
-    return contacts
+    return [object_models.Contact(*row) for row in await dbcon.fetch_all(q, (contact_group_id,))]
 
 
 async def get_all_contact_groups(dbcon: DBConnection) -> Iterable[object_models.ContactGroup]:
@@ -436,3 +372,11 @@ async def get_contact_group(dbcon: DBConnection, id: int) -> Any:  # Use any bec
     if row:
         contact = object_models.ContactGroup(*row)
     return contact
+
+
+async def get_contact_groups_for_metadata(dbcon: DBConnection, meta_key: str, meta_value: str):
+    q = """select cg.id, cg.name, cg.active
+        from contact_groups as cg, object_metadata as meta
+        where meta.key=%s and meta.value=%s and meta.object_type="contact_group" and meta.object_id=cg.id"""
+    q_args = (meta_key, meta_value)
+    return [object_models.ContactGroup(*row) for row in await dbcon.fetch_all(q, q_args)]
