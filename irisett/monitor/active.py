@@ -8,7 +8,7 @@ A monitor managed is used for scheduling monitor service checks and starting
 each check.
 """
 
-from typing import Dict, Any, List, Union, Optional, Iterator
+from typing import Dict, Any, List, Union, Optional, Iterator, Tuple, cast
 import time
 import random
 import jinja2
@@ -461,9 +461,10 @@ class ActiveMonitor(log.LoggingMixin):
         expanded_args = self.get_expanded_args()
         self.log_debug('monitoring: %s %s' % (self.monitor_def.cmdline_filename, expanded_args))
         event.running('RUN_ACTIVE_MONITOR', monitor=self)
+        msg = ''  # type: Union[str, bytes]
         try:
-            msg = await nagios.run_plugin(self.monitor_def.cmdline_filename, expanded_args, 30)
-            msg, perf = msg
+            _msg = await nagios.run_plugin(self.monitor_def.cmdline_filename, expanded_args, 30)
+            msg, perf = _msg
             check_state = 'UP'
         except nagios.MonitorFailedError as e:
             msg = e.args[0]
@@ -475,7 +476,9 @@ class ActiveMonitor(log.LoggingMixin):
             msg = str(e)
         msg = msg[:199]  # Set a reasonable max length for stored monitor messages.
         if type(msg) == bytes:
+            msg = cast(bytes, msg)
             msg = msg.decode('utf-8', errors='ignore')
+        msg = cast(str, msg)
         self.msg = msg
         self.update_consecutive_checks(check_state)
         await self.handle_check_result(check_state, msg)
@@ -648,7 +651,7 @@ class ActiveMonitor(log.LoggingMixin):
     async def update_args(self, args: Dict[str, str]) -> None:
         async def _run(cur: sql.Cursor) -> None:
             q = """delete from active_monitor_args where monitor_id=%s"""
-            q_args = (self.id,)
+            q_args = (self.id,)  # type: Tuple
             await cur.execute(q, q_args)
             q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
             for name, value in args.items():
@@ -752,9 +755,9 @@ async def remove_deleted_monitors(dbcon: DBConnection) -> None:
 
 async def create_active_monitor(manager: ActiveMonitorManager, args: Dict[str, str],
                                 monitor_def: ActiveMonitorDef) -> ActiveMonitor:
-    async def _run(cur):
+    async def _run(cur: sql.Cursor) -> None:
         q = """insert into active_monitors (def_id, state, state_ts, msg) values (%s, %s, %s, %s)"""
-        q_args = (monitor_def.id, 'UNKNOWN', 0, '')
+        q_args = (monitor_def.id, 'UNKNOWN', 0, '')  # type: Tuple
         await cur.execute(q, q_args)
         _monitor_id = cur.lastrowid
         q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
@@ -790,7 +793,7 @@ async def create_active_monitor_def(manager: ActiveMonitorManager, name: str, de
 async def remove_monitor_def_from_db(dbcon: DBConnection, monitor_def_id: int) -> None:
     """Remove all traces of a monitor def from the database."""
 
-    def _run(cur):
+    def _run(cur: sql.Cursor) -> None:
         q_args = (monitor_def_id,)
         q = """delete from active_monitor_defs where id=%s"""
         cur.operation(q, q_args)

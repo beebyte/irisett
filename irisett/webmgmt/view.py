@@ -129,7 +129,7 @@ class DisplayActiveMonitorView(web.View):
         return context
 
 
-async def run_active_monitor_view(request):
+async def run_active_monitor_view(request: web.Request) -> web.Response:
     """GET view to run an active monitor immediately."""
     monitor_id = int(request.match_info['id'])
     am_manager = request.app['active_monitor_manager']
@@ -138,7 +138,7 @@ async def run_active_monitor_view(request):
     return web.HTTPFound('/active_monitor/%s/?notification_msg=Monitor job scheduled' % monitor_id)
 
 
-async def send_active_monitor_test_notification(request):
+async def send_active_monitor_test_notification(request: web.Request) -> web.Response:
     """GET view to send a test notification for an active monitor."""
     monitor_id = int(request.match_info['id'])
     am_manager = request.app['active_monitor_manager']

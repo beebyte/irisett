@@ -56,11 +56,11 @@ class DBConnection:
         await self._upgrade_db()
         log.msg('Database initialized')
 
-    async def close(self):
+    async def close(self) -> None:
         self.pool.terminate()
         await self.pool.wait_closed()
 
-    async def _create_db(self):
+    async def _create_db(self) -> None:
         # Yes yes, this risks sql injection, but the dbname is from the
         # irisett config file, so if you want to sql inject yourself,
         # go ahead.
@@ -68,7 +68,7 @@ class DBConnection:
         q = """CREATE DATABASE %s""" % self.dbname
         await self.operation(q)
 
-    async def _init_db(self, only_init_tables: bool):
+    async def _init_db(self, only_init_tables: bool) -> None:
         log.msg('Initializing empty database')
         commands = sql_data.SQL_ALL
         if only_init_tables:
@@ -96,7 +96,7 @@ class DBConnection:
             return False
         return True
 
-    async def _upgrade_db(self):
+    async def _upgrade_db(self) -> None:
         """Upgrade to a newer database version if required.
 
         Loops through the commands in sql_data.SQL_UPGRADES and runs them.
@@ -170,7 +170,7 @@ class DBConnection:
                 await conn.commit()
         return ret
 
-    async def transact(self, func: Callable[..., Any], *args, **kwargs) -> Any:
+    async def transact(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Create a db cursor and hand it to a callback.
 
         This can be used to simulate transactions.

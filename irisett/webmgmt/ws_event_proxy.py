@@ -4,6 +4,7 @@ Setup a websocket listener that sends irisett events over the websocket
 as they arrive.
 """
 
+from typing import Any, Optional
 import asyncio
 import aiohttp
 import json
@@ -15,14 +16,14 @@ from irisett import (
 
 
 class WSEventProxy:
-    def __init__(self, request):
+    def __init__(self, request: web.Request) -> None:
         self.request = request
         self.ws = web.WebSocketResponse()
         self.running = False
         self.client_started = False
-        self.listener = None  # type: event.EventListener
+        self.listener = None  # type: Optional[event.EventListener]
 
-    async def run(self):
+    async def run(self) -> None:
         await self.ws.prepare(self.request)
         self.running = True
         self.listener = event.listen(self._handle_events)
@@ -34,11 +35,13 @@ class WSEventProxy:
             pass
         finally:
             event.stop_listening(self.listener)
-            self.listener = False
+            self.listener = None
             if not self.ws.closed:
                 self.ws.close()
 
-    async def _ws_read(self):
+    async def _ws_read(self) -> None:
+        if not self.listener:
+            return
         # noinspection PyTypeChecker
         async for msg in self.ws:
             if msg.type == aiohttp.WSMsgType.TEXT:
@@ -57,7 +60,7 @@ class WSEventProxy:
                 break
         self.running = False
 
-    async def _handle_events(self, listener, event_name, timestamp, data):
+    async def _handle_events(self, listener: event.EventListener, event_name: str, timestamp: int, data: Any) -> None:
         if not self.client_started:
             return
         if not self.running or self.ws.closed:

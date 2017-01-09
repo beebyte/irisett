@@ -40,10 +40,10 @@ class EventListener:
         self.event_filter = self._parse_filter_list(event_filter)
         self.active_monitor_filter = self._parse_filter_list(active_monitor_filter)
 
-    def set_event_filter(self, filter):
+    def set_event_filter(self, filter: Optional[List]) -> None:
         self.event_filter = self._parse_filter_list(filter)
 
-    def set_active_monitor_filter(self, filter):
+    def set_active_monitor_filter(self, filter: Optional[List]) -> None:
         self.active_monitor_filter = self._parse_filter_list(self._parse_active_monitor_filter(filter))
 
     @staticmethod
@@ -64,7 +64,7 @@ class EventListener:
             ret = set(filter)
         return ret
 
-    def wants_event(self, event_name: str, args: Dict):
+    def wants_event(self, event_name: str, args: Dict) -> bool:
         """Check if an event matches a listeners filters.
 
         If it does not, the listener will not receive the event.
@@ -84,7 +84,7 @@ class EventTracer:
     Creates listeners and receives events. When an event is received it
     is sent to all listeners (that matches the events filters.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         self.listeners = set()  # type: Set[EventListener]
         stats.set('num_listeners', 0, 'EVENT')
         stats.set('events_fired', 0, 'EVENT')
@@ -104,13 +104,13 @@ class EventTracer:
         self.listeners.add(listener)
         return listener
 
-    def stop_listening(self, listener: EventListener):
+    def stop_listening(self, listener: EventListener) -> None:
         """Remove a callback from the listener list."""
         if listener in self.listeners:
             stats.dec('num_listeners', 'EVENT')
             self.listeners.remove(listener)
 
-    def running(self, event_name: str, **kwargs):
+    def running(self, event_name: str, **kwargs: Any) -> None:
         """An event is running.
 
         Listener callbacks will be called with:
