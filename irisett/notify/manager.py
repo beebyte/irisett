@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Any, List
+from typing import Dict, Iterable, Any, List, Optional
 import asyncio
 
 from irisett import (
@@ -22,7 +22,7 @@ class NotificationManager:
             self.http_settings = None
             self.email_settings = None
             self.sms_settings = None
-            self.slack_webhook_url = None
+            self.slack_settings = None
         else:
             self.http_settings = http.parse_settings(config)
             self.email_settings = email.parse_settings(config)
@@ -61,6 +61,6 @@ class NotificationManager:
         await http.send_http_notification(self.http_settings['url'], data)
 
     async def send_slack_notification(self, attachments: List[Dict]):
-        if not self.slack_webhook_url:
+        if not self.slack_settings:
             return
         await slack.send_slack_notification(self.slack_settings['webhook-url'], attachments)
