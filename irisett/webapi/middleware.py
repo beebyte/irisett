@@ -3,7 +3,7 @@
 Middleware for common actions, authentication etc.
 """
 
-from typing import Optional
+from typing import Optional, Callable, Any
 import base64
 import binascii
 from aiohttp import web
@@ -19,7 +19,7 @@ from irisett.errors import IrisettError
 
 
 # noinspection PyUnusedLocal
-async def logging_middleware_factory(app: web.Application, handler):
+async def logging_middleware_factory(app: web.Application, handler: Any) -> Callable:
     """Basic logging and accounting."""
     async def middleware_handler(request: web.Request) -> web.Response:
         stats.inc('num_calls', 'WEBAPI')
@@ -29,7 +29,7 @@ async def logging_middleware_factory(app: web.Application, handler):
     return middleware_handler
 
 
-async def basic_auth_middleware_factory(app: web.Application, handler):
+async def basic_auth_middleware_factory(app: web.Application, handler: Any) -> Callable:
     """Authentication.
 
     Uses HTTP basic auth to check that requests are including the required
@@ -59,7 +59,7 @@ async def basic_auth_middleware_factory(app: web.Application, handler):
 
 
 # noinspection PyUnusedLocal
-async def error_handler_middleware_factory(app: web.Application, handler):
+async def error_handler_middleware_factory(app: web.Application, handler: Any) -> Callable:
     """Error handling middle.
 
     Catch errors raised in web views and try to return a corresponding

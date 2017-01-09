@@ -20,19 +20,19 @@ def get_section(section: Optional[str]) -> Dict[str, float]:
     return ret
 
 
-def set(var: str, value: float, section: Optional[str] = None):
+def set(var: str, value: float, section: Optional[str] = None) -> None:
     """Set a value."""
     stats = get_section(section)
     stats[var] = value
 
 
-def inc(var: str, section: Optional[str] = None):
+def inc(var: str, section: Optional[str] = None) -> None:
     """Increment a value."""
     stats = get_section(section)
     stats[var] += 1
 
 
-def dec(var: str, section: Optional[str] = None):
+def dec(var: str, section: Optional[str] = None) -> None:
     """Decrement a value"""
     stats = get_section(section)
     stats[var] -= 1

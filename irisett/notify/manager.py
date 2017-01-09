@@ -15,7 +15,7 @@ from irisett.notify import (
 
 # noinspection PyMethodMayBeStatic
 class NotificationManager:
-    def __init__(self, config, *, loop: asyncio.AbstractEventLoop=None) -> None:
+    def __init__(self, config: Any, *, loop: asyncio.AbstractEventLoop=None) -> None:
         self.loop = loop or asyncio.get_event_loop()
         if not config:
             log.msg('Missing config section, no alert notification will be sent', 'NOTIFICATIONS')
@@ -55,12 +55,12 @@ class NotificationManager:
             await clicksend.send_sms(recipients, msg, self.sms_settings['username'], self.sms_settings['api-key'],
                                      self.sms_settings['sender'])
 
-    async def send_http_notification(self, data):
+    async def send_http_notification(self, data: Any) -> None:
         if not self.http_settings:
             return
         await http.send_http_notification(self.http_settings['url'], data)
 
-    async def send_slack_notification(self, attachments: List[Dict]):
+    async def send_slack_notification(self, attachments: List[Dict]) -> None:
         if not self.slack_settings:
             return
         await slack.send_slack_notification(self.slack_settings['webhook-url'], attachments)

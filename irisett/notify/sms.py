@@ -8,7 +8,7 @@ from irisett.notify import (
 )
 
 
-def parse_settings(config) -> Optional[Dict[str, Any]]:
+def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     provider = config.get('sms-provider')
     if not provider:
         log.msg('No SMS provider specified, no sms notifications will be sent', 'NOTIFICATIONS')

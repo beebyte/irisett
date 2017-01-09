@@ -43,7 +43,7 @@ async def send_alert_notification(settings: Dict, tmpl_args: Dict):
     await send_slack_notification(settings['webhook-url'], [attachment])
 
 
-def parse_settings(config) -> Optional[Dict[str, Any]]:
+def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     ret = {
         'webhook-url': config.get('slack-webhook-url'),
         'tmpl-msg': config.get('slack-tmpl-msg'),

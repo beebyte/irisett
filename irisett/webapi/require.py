@@ -23,7 +23,7 @@ def require_str(value: Any, convert: bool=False, allow_none: bool=False) -> Any:
     return value
 
 
-def require_bool(value: Optional[Union[bool, str, int]], convert=False, allow_none=False) -> Any:
+def require_bool(value: Optional[Union[bool, str, int]], convert: bool=False, allow_none: bool=False) -> Any:
     """Make sure a value is a boolean.
 
     Used when dealing with http input data.
@@ -62,7 +62,7 @@ def require_dict(value: Optional[Dict[Any, Any]], key_type: Any=None, value_type
     return value
 
 
-def require_list(value: Optional[List[Any]], item_type=None, allow_none=False) -> Any:
+def require_list(value: Optional[List[Any]], item_type: Any=None, allow_none: bool=False) -> Any:
     """Make sure a value is a List[item_type].
 
     Used when dealing with http input data.
@@ -79,7 +79,7 @@ def require_list(value: Optional[List[Any]], item_type=None, allow_none=False) -
     return value
 
 
-def require_int(value: Optional[Union[SupportsInt, str, bytes]], allow_none=False) -> Any:
+def require_int(value: Optional[Union[SupportsInt, str, bytes]], allow_none: bool=False) -> Any:
     """Make sure a value is an int.
 
     Used when dealing with http input data.
