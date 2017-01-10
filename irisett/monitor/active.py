@@ -115,7 +115,7 @@ class ActiveMonitorManager:
     """
 
     def __init__(self, dbcon: DBConnection, notification_manager: NotificationManager,
-                 max_concurrent_jobs: int, *, debug_mode: bool=False, loop: asyncio.AbstractEventLoop=None) -> None:
+                 max_concurrent_jobs: int, *, debug_mode: bool = False, loop: asyncio.AbstractEventLoop = None) -> None:
         self.loop = loop or asyncio.get_event_loop()
         self.dbcon = dbcon
         self.notification_manager = notification_manager
@@ -228,6 +228,7 @@ class MonitorTemplateCache:
     flushed when needed for example when a monitor def or monitor is
     updated.
     """
+
     def __init__(self) -> None:
         self.cache = {}  # type: Dict[int, Any]
 
@@ -321,7 +322,7 @@ class ActiveMonitorDef(log.LoggingMixin):
             raise errors.IrisettError('can\'t remove active monitor def that is in use')
         del self.manager.monitor_defs[self.id]
         self.tmpl_cache.flush_all()
-        await remove_monitor_def_from_db(self.manager.dbcon, self.id)
+        await active_sql.delete_active_monitor_def(self.manager.dbcon, self.id)
 
     async def update(self, update_params: Dict[str, Any]) -> None:
         async def _run(cur: sql.Cursor) -> None:
@@ -359,9 +360,9 @@ class ActiveMonitorDef(log.LoggingMixin):
             existing_arg.name = new_arg.name
             existing_arg.required = new_arg.required
             existing_arg.default_value = new_arg.default_value
-            await update_monitor_def_arg_in_db(self.manager.dbcon, existing_arg)
+            await active_sql.update_active_monitor_def_arg(self.manager.dbcon, existing_arg)
         else:
-            new_arg.id = await add_monitor_def_arg_to_db(self.manager.dbcon, new_arg)
+            new_arg.id = await active_sql.create_active_monitor_def_arg(self.manager.dbcon, new_arg)
             self.arg_spec.append(new_arg)
         self.tmpl_cache.flush_all()
 
@@ -370,7 +371,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         if arg:
             self.arg_spec.remove(arg)
             self.tmpl_cache.flush_all()
-            await delete_monitor_def_arg_from_db(self.manager.dbcon, arg.id)
+            await active_sql.delete_active_monitor_def_arg(self.manager.dbcon, arg.id)
 
     async def get_notify_data(self) -> Dict[str, str]:
         q = """select name, description from active_monitor_defs where id=%s"""
@@ -742,54 +743,15 @@ async def create_active_monitor(manager: ActiveMonitorManager, args: Dict[str, s
     return monitor
 
 
-async def create_active_monitor_def(manager: ActiveMonitorManager, name: str, description: str,
-                                    active: bool, cmdline_filename: str, cmdline_args_tmpl: str,
-                                    description_tmpl: str) -> ActiveMonitorDef:
-    q = """insert into active_monitor_defs
-        (name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl)
-        values (%s, %s, %s, %s, %s, %s)"""
-    q_args = (name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl)
-    monitor_def_id = await manager.dbcon.operation(q, q_args)
-    monitor_def = ActiveMonitorDef(monitor_def_id, name, active, cmdline_filename,
-                                   cmdline_args_tmpl, description_tmpl, [], manager)
+async def create_active_monitor_def(
+        manager: ActiveMonitorManager, model: object_models.ActiveMonitorDef) -> ActiveMonitorDef:
+    monitor_def_id = await active_sql.create_active_monitor_def(
+        manager.dbcon, model)
+    monitor_def = ActiveMonitorDef(monitor_def_id, model.name, model.active, model.cmdline_filename,
+                                   model.cmdline_args_tmpl, model.description_tmpl, [], manager)
     log.msg('Created active monitor def %s' % monitor_def)
     manager.monitor_defs[monitor_def.id] = monitor_def
     return monitor_def
-
-
-async def remove_monitor_def_from_db(dbcon: DBConnection, monitor_def_id: int) -> None:
-    """Remove all traces of a monitor def from the database."""
-
-    def _run(cur: sql.Cursor) -> None:
-        q_args = (monitor_def_id,)
-        q = """delete from active_monitor_defs where id=%s"""
-        cur.execute(q, q_args)
-        q = """delete from active_monitor_def_args where active_monitor_def_id=%s"""
-        cur.execute(q, q_args)
-
-    await dbcon.transact(_run)
-
-
-async def add_monitor_def_arg_to_db(
-        dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg) -> int:
-    q = """insert into active_monitor_def_args
-    (active_monitor_def_id, name, display_name, description, required, default_value)
-    values (%s, %s, %s, %s, %s, %s)"""
-    arg_id = await dbcon.operation(q, object_models.insert_values(arg))
-    return arg_id
-
-
-async def update_monitor_def_arg_in_db(dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg) -> None:
-    q = """update active_monitor_def_args
-        set name=%s, display_name=%s, description=%s, required=%s, default_value=%s
-        where id=%s"""
-    q_args = (arg.name, arg.display_name, arg.description, arg.required, arg.default_value, arg.id)
-    await dbcon.operation(q, q_args)
-
-
-async def delete_monitor_def_arg_from_db(dbcon: DBConnection, arg_id: int) -> None:
-    q = """delete from active_monitor_def_args where id=%s"""
-    await dbcon.operation(q, (arg_id,))
 
 
 def get_monitor_def_by_name(manager: ActiveMonitorManager, name: str) -> Optional[ActiveMonitorDef]:

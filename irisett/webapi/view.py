@@ -407,14 +407,19 @@ class ActiveMonitorDefView(web.View):
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
+        object_models.ActiveMonitorDef()
         monitor_def = await create_active_monitor_def(
             self.request.app['active_monitor_manager'],
-            cast(str, require_str(request_data['name'])),
-            cast(str, require_str(request_data['description'])),
-            cast(bool, require_bool(request_data['active'])),
-            cast(str, require_str(request_data['cmdline_filename'])),
-            cast(str, require_str(request_data['cmdline_args_tmpl'])),
-            cast(str, require_str(request_data['description_tmpl'])))
+            object_models.ActiveMonitorDef(
+                id=None,
+                name=cast(str, require_str(request_data['name'])),
+                description=cast(str, require_str(request_data['description'])),
+                active=cast(bool, require_bool(request_data['active'])),
+                cmdline_filename=cast(str, require_str(request_data['cmdline_filename'])),
+                cmdline_args_tmpl=cast(str, require_str(request_data['cmdline_args_tmpl'])),
+                description_tmpl=cast(str, require_str(request_data['description_tmpl'])),
+            )
+        )
         if not monitor_def:
             raise errors.InvalidData('invalid monitor def arguments')
         return web.json_response(monitor_def.id)

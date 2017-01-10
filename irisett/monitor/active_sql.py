@@ -103,3 +103,46 @@ async def delete_active_monitor(dbcon: DBConnection, monitor_id: int) -> None:
         await cur.execute(q, q_args)
 
     await dbcon.transact(_run)
+
+
+async def create_active_monitor_def(dbcon: DBConnection, model: object_models.ActiveMonitorDef) -> int:
+    q = """insert into active_monitor_defs
+        (name, description, active, cmdline_filename, cmdline_args_tmpl, description_tmpl)
+        values (%s, %s, %s, %s, %s, %s)"""
+    monitor_def_id = await dbcon.operation(q, object_models.insert_values(model))
+    return monitor_def_id
+
+
+async def delete_active_monitor_def(dbcon: DBConnection, monitor_def_id: int) -> None:
+    """Remove all traces of a monitor def from the database."""
+
+    def _run(cur: sql.Cursor) -> None:
+        q_args = (monitor_def_id,)
+        q = """delete from active_monitor_defs where id=%s"""
+        cur.execute(q, q_args)
+        q = """delete from active_monitor_def_args where active_monitor_def_id=%s"""
+        cur.execute(q, q_args)
+
+    await dbcon.transact(_run)
+
+
+async def create_active_monitor_def_arg(
+        dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg) -> int:
+    q = """insert into active_monitor_def_args
+    (active_monitor_def_id, name, display_name, description, required, default_value)
+    values (%s, %s, %s, %s, %s, %s)"""
+    arg_id = await dbcon.operation(q, object_models.insert_values(arg))
+    return arg_id
+
+
+async def update_active_monitor_def_arg(dbcon: DBConnection, arg: object_models.ActiveMonitorDefArg) -> None:
+    q = """update active_monitor_def_args
+        set name=%s, display_name=%s, description=%s, required=%s, default_value=%s
+        where id=%s"""
+    q_args = (arg.name, arg.display_name, arg.description, arg.required, arg.default_value, arg.id)
+    await dbcon.operation(q, q_args)
+
+
+async def delete_active_monitor_def_arg(dbcon: DBConnection, arg_id: int) -> None:
+    q = """delete from active_monitor_def_args where id=%s"""
+    await dbcon.operation(q, (arg_id,))
