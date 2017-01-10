@@ -59,7 +59,7 @@ async def delete_contact(dbcon: DBConnection, contact_id: int) -> None:
     await dbcon.operation(q, (contact_id,))
 
 
-async def create_contact_group(dbcon: DBConnection, name: str, active: bool) -> str:
+async def create_contact_group(dbcon: DBConnection, name: str, active: bool) -> int:
     """Add a contact group to the database."""
     q = """insert into contact_groups (name, active) values (%s, %s)"""
     q_args = (name, active)
