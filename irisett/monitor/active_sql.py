@@ -1,10 +1,11 @@
 """SQL functions for active monitors."""
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Dict, Tuple
 
 from irisett.sql import DBConnection
 from irisett import (
     object_models,
+    sql,
 )
 
 
@@ -62,3 +63,43 @@ async def get_active_monitors_for_metadata(dbcon: DBConnection, meta_key: str, m
         where meta.key=%s and meta.value=%s and meta.object_type="active_monitor" and meta.object_id=mon.id"""
     q_args = (meta_key, meta_value)
     return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q, q_args)]
+
+
+async def create_active_monitor(dbcon: DBConnection, monitor_def_id: int,
+                                monitor_args: Dict[str, str]) -> int:
+    async def _run(cur: sql.Cursor) -> int:
+        q = """insert into active_monitors (def_id, state, state_ts, msg) values (%s, %s, %s, %s)"""
+        q_args = (monitor_def_id, 'UNKNOWN', 0, '')  # type: Tuple
+        await cur.execute(q, q_args)
+        _monitor_id = cur.lastrowid
+        q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
+        for name, value in monitor_args.items():
+            q_args = (_monitor_id, name, value)
+            await cur.execute(q, q_args)
+        return _monitor_id
+
+    monitor_id = await dbcon.transact(_run)
+    return monitor_id
+
+
+async def delete_active_monitor(dbcon: DBConnection, monitor_id: int) -> None:
+    """Remove all traces of a monitor from the database."""
+
+    async def _run(cur: sql.Cursor) -> None:
+        q_args = (monitor_id,)
+        q = """delete from active_monitors where id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from active_monitor_args where monitor_id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from active_monitor_alerts where monitor_id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from active_monitor_contacts where active_monitor_id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from object_metadata where object_type="active_monitor" and object_id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from object_bindata where object_type="active_monitor" and object_id=%s"""
+        await cur.execute(q, q_args)
+        q = """delete from active_monitor_groups where active_monitor_id=%s"""
+        await cur.execute(q, q_args)
+
+    await dbcon.transact(_run)

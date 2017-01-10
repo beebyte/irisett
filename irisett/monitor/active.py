@@ -647,7 +647,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.log_msg('purging deleted monitor')
         stats.dec('num_monitors', 'ACT_MON')
         self.monitor_def.tmpl_cache.flush_monitor(self)
-        await remove_monitor_from_db(self.manager.dbcon, self.id)
+        await active_sql.delete_active_monitor(self.manager.dbcon, self.id)
 
     async def update_args(self, args: Dict[str, str]) -> None:
         async def _run(cur: sql.Cursor) -> None:
@@ -719,29 +719,6 @@ class ActiveMonitor(log.LoggingMixin):
         await self.manager.dbcon.transact(_run)
 
 
-async def remove_monitor_from_db(dbcon: DBConnection, monitor_id: int) -> None:
-    """Remove all traces of a monitor from the database."""
-
-    async def _run(cur: sql.Cursor) -> None:
-        q_args = (monitor_id,)
-        q = """delete from active_monitors where id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from active_monitor_args where monitor_id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from active_monitor_alerts where monitor_id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from active_monitor_contacts where active_monitor_id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from object_metadata where object_type="active_monitor" and object_id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from object_bindata where object_type="active_monitor" and object_id=%s"""
-        await cur.execute(q, q_args)
-        q = """delete from active_monitor_groups where active_monitor_id=%s"""
-        await cur.execute(q, q_args)
-
-    await dbcon.transact(_run)
-
-
 async def remove_deleted_monitors(dbcon: DBConnection) -> None:
     """Remove any monitors that have previously been set as deleted.
 
@@ -751,24 +728,13 @@ async def remove_deleted_monitors(dbcon: DBConnection) -> None:
     q = """select id from active_monitors where deleted=true"""
     rows = await dbcon.fetch_all(q)
     for monitor_id in rows:
-        await remove_monitor_from_db(dbcon, monitor_id)
+        await active_sql.delete_active_monitor(dbcon, monitor_id)
 
 
 async def create_active_monitor(manager: ActiveMonitorManager, args: Dict[str, str],
                                 monitor_def: ActiveMonitorDef) -> ActiveMonitor:
-    async def _run(cur: sql.Cursor) -> None:
-        q = """insert into active_monitors (def_id, state, state_ts, msg) values (%s, %s, %s, %s)"""
-        q_args = (monitor_def.id, 'UNKNOWN', 0, '')  # type: Tuple
-        await cur.execute(q, q_args)
-        _monitor_id = cur.lastrowid
-        q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
-        for name, value in args.items():
-            q_args = (_monitor_id, name, value)
-            await cur.execute(q, q_args)
-        return _monitor_id
-
     monitor_def.validate_monitor_args(args)
-    monitor_id = await manager.dbcon.transact(_run)
+    monitor_id = await active_sql.create_active_monitor(manager.dbcon, monitor_def.id, args)
     monitor = ActiveMonitor(monitor_id, args, monitor_def, 'UNKNOWN', state_ts=0, msg='', alert_id=None,
                             checks_enabled=True, alerts_enabled=True, manager=manager)
     log.msg('Created active monitor %s' % monitor)
