@@ -23,7 +23,7 @@ from irisett.object_exists import (
 
 
 async def create_contact(dbcon: DBConnection, name: Optional[str], email: Optional[str],
-                         phone: Optional[str], active: bool) -> str:
+                         phone: Optional[str], active: bool) -> int:
     """Add a contact to the database."""
     q = """insert into contacts (name, email, phone, active) values (%s, %s, %s, %s)"""
     q_args = (name, email, phone, active)

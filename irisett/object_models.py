@@ -103,7 +103,6 @@ class ActiveMonitorDef:
     cmdline_filename = attr.ib()
     cmdline_args_tmpl = attr.ib()
     description_tmpl = attr.ib()
-    args = attr.ib(init=False, default=attr.Factory(list))
     model_type = 'active_monitor_arg'
 
 
