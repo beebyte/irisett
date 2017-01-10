@@ -29,7 +29,7 @@ class DBConnection:
         stats.set('queries', 0, 'SQL')
         stats.set('transactions', 0, 'SQL')
 
-    async def initialize(self, *, only_init_tables: bool=False):
+    async def initialize(self, *, only_init_tables: bool=False, reset_db: bool=False):
         """Initialize the DBConnection.
 
         Creates a connection pool using aiomysql and initializes the database
@@ -38,6 +38,8 @@ class DBConnection:
         self.pool = await aiomysql.create_pool(
             host=self.host, user=self.user, password=self.passwd,
             loop=self.loop)
+        if reset_db:
+            await self._drop_db()
         db_exists = await self._check_db_exists()
         if not db_exists:
             await self._create_db()
@@ -59,6 +61,11 @@ class DBConnection:
     async def close(self) -> None:
         self.pool.terminate()
         await self.pool.wait_closed()
+
+    async def _drop_db(self) -> None:
+        log.msg('Removing database %s' % self.dbname)
+        q = """DROP DATABASE %s""" % self.dbname
+        await self.operation(q)
 
     async def _create_db(self) -> None:
         # Yes yes, this risks sql injection, but the dbname is from the
