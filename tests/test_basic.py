@@ -8,6 +8,7 @@ from irisett import (
     object_models,
     contact,
     monitor_group,
+    metadata
 )
 from sqlsetup import get_dbcon
 
@@ -82,3 +83,19 @@ async def test_active_monitor_contacts():
     assert len(list(monitor_contacts)) == 4
     contacts = await contact.get_contact_dict_for_active_monitor(dbcon, monitor_id)
     assert len(contacts['email']) == 4
+
+
+@pytest.mark.asyncio
+async def test_metadata_basic():
+    """Create/update/delete metadata."""
+    dbcon = await get_dbcon(reinit=True)
+    await metadata.add_metadata(dbcon, 'test', 1, {'key': 'value'})
+    await metadata.update_metadata(dbcon, 'test', 1, {'key': 'value2', 'key2': 'value2'})
+    res = await metadata.get_metadata(dbcon, 'test', 1)
+    assert res == {'key': 'value2', 'key2': 'value2'}
+    await metadata.delete_metadata(dbcon, 'test', 1, ['key2'])
+    res = await metadata.get_metadata(dbcon, 'test', 1)
+    assert res == {'key': 'value2'}
+    await metadata.delete_metadata(dbcon, 'test', 1)
+    res = await metadata.get_metadata(dbcon, 'test', 1)
+    assert res == {}
