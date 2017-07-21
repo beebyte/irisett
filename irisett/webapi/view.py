@@ -315,9 +315,7 @@ class ActiveMonitorContactView(web.View):
         if 'include_all' in self.request.rel_url.query:
             contacts = await get_all_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         else:
-            contacts = object_models.asdict(
-                await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
-            )
+            contacts = await get_contacts_for_active_monitor(self.request.app['dbcon'], monitor_id)
         ret = object_models.list_asdict(contacts)
         return web.json_response(ret)
 
