@@ -86,7 +86,8 @@ def require_int(value: Optional[Union[SupportsInt, str, bytes]], allow_none: boo
     """
     if value is None and allow_none:
         return value
-    value = cast(Union[SupportsInt, str, bytes], value)
+    # value = cast(Union[SupportsInt, str, bytes], value)
+    value = cast(SupportsInt, value)
     try:
         value = int(value)
     except (ValueError, TypeError):

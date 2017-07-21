@@ -75,6 +75,7 @@ def apply_metadata_to_model_list(
 
     This is a commonly used pattern in object get views.
     """
+    model = None  # type: Optional[Dict[Any, Any]]
     model_dict = {model.id: object_models.asdict(model) for model in model_list}
     for model in model_dict.values():
         model['metadata'] = {}
@@ -391,6 +392,7 @@ class ActiveMonitorDefView(web.View):
             monitor_def_list = await active_sql.get_all_active_monitor_defs(dbcon)
             metadata_list = await metadata.get_metadata_for_object_type(dbcon, 'active_monitor_def')
             arg_list = await active_sql.get_all_active_monitor_def_args(dbcon)
+        monitor_def = None  # type: Optional[Dict[Any, Any]]
         monitor_def_dict = {item.id: object_models.asdict(item) for item in monitor_def_list}
         for monitor_def in monitor_def_dict.values():
             monitor_def['metadata'] = {}

@@ -5,7 +5,6 @@ from irisett.sql import DBConnection
 from irisett.notify.manager import NotificationManager
 from irisett.monitor import active_sql
 from irisett import (
-    monitor_group,
     object_models,
     contact,
     monitor_group,
@@ -83,28 +82,3 @@ async def test_active_monitor_contacts():
     assert len(list(monitor_contacts)) == 4
     contacts = await contact.get_contact_dict_for_active_monitor(dbcon, monitor_id)
     assert len(contacts['email']) == 4
-
-
-#@pytest.mark.asyncio
-#async def test_active_monitor_manager(notification_manager):
-#    dbcon = DBConnection(host=DB_HOST, user=DB_USERNAME, passwd=DB_PASSWORD, dbname=DB_NAME)
-#    await dbcon.initialize(only_init_tables=True)
-#    mon_manager = ActiveMonitorManager(dbcon, notification_manager, 10)
-#    assert isinstance(mon_manager, ActiveMonitorManager)
-
-
-#@pytest.mark.asyncio
-#async def test_create_active_monitor_def(notification_manager):
-#    dbcon = DBConnection(host=DB_HOST, user=DB_USERNAME, passwd=DB_PASSWORD, dbname=DB_NAME)
-#    await dbcon.initialize(only_init_tables=True)
-#    mon_manager = ActiveMonitorManager(dbcon, notification_manager, 10)
-#    await mon_manager.load()
-#    num_defs = len(mon_manager.monitor_defs)
-#    monitor_def = await create_active_monitor_def(
-#        mon_manager, 'Ping monitor', '',
-#        True, '/usr/lib/nagios/plugins/check_http',
-#        '-H {{hostname}} -w {{rtt}},{{pl}}% -c {{rtt}},{{pl}}%',
-#        'Ping monitor for {{hostname}}')
-#    assert isinstance(monitor_def, ActiveMonitorDef)
-#    assert len(mon_manager.monitor_defs) > num_defs
-#    await dbcon.close()
