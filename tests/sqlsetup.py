@@ -4,7 +4,7 @@ from irisett.sql import DBConnection
 
 
 DB_HOST = 'localhost'
-DB_USERNAME = 'irisett'
+DB_USERNAME = 'irisett_test'
 DB_PASSWORD = 'Eichee0e'
 DB_NAME = 'irisett_test'
 
