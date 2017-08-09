@@ -68,7 +68,7 @@ user. From the mysql command line client:
 
     $ GRANT ALL ON irisett.* TO 'irisett'@'localhost';
 
-Copy the same [irisett.conf](https://github.com/beebyte/irisett/blob/master/examples/irisett.conf) to a suitable location and edit it to updates password
+Copy the same [irisett.cfg](https://github.com/beebyte/irisett/blob/master/examples/irisett.cfg) to a suitable location and edit it to updates password
 etc.
 
 Make sure you have a local SMTP server running for alert notifications.
@@ -82,7 +82,7 @@ in /usr/lib/nagios/plugins
 
 Launch irisett:
 
-    $ irisett -c /path/to/irisett.conf
+    $ irisett -c /path/to/irisett.cfg
 
 Use the command line client irisett-cli to communicate with the irisett
 server.
