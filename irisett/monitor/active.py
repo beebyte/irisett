@@ -325,13 +325,6 @@ class ActiveMonitorDef(log.LoggingMixin):
         await active_sql.delete_active_monitor_def(self.manager.dbcon, self.id)
 
     async def update(self, update_params: Dict[str, Any]) -> None:
-        async def _run(cur: sql.Cursor) -> None:
-            for param in ['name', 'description', 'active', 'cmdline_filename', 'cmdline_args_tmpl', 'description_tmpl']:
-                if param in update_params:
-                    q = """update active_monitor_defs set %s=%%s where id=%%s""" % param
-                    q_args = (update_params[param], self.id)
-                    await cur.execute(q, q_args)
-
         self.log_msg('updating monitor def')
         if 'name' in update_params:
             self.name = update_params['name']
@@ -346,7 +339,13 @@ class ActiveMonitorDef(log.LoggingMixin):
             self.description_tmpl = update_params['description_tmpl']
             self.jinja_description_tmpl = jinja2.Template(self.description_tmpl)
         self.tmpl_cache.flush_all()
-        await self.manager.dbcon.transact(_run)
+        queries = []
+        for param in ['name', 'description', 'active', 'cmdline_filename', 'cmdline_args_tmpl', 'description_tmpl']:
+            if param in update_params:
+                q = """update active_monitor_defs set %s=%%s where id=%%s""" % param
+                q_args = (update_params[param], self.id)
+                queries.append(q, q_args)
+        await self.manager.dbcon.multi_operation(queries)
 
     def iter_monitors(self) -> Iterator['ActiveMonitor']:
         """List all monitors that use this monitor def."""
@@ -609,19 +608,19 @@ class ActiveMonitor(log.LoggingMixin):
     async def txn_create_alert(self, cur: sql.Cursor) -> None:
         q = """insert into active_monitor_alerts (monitor_id, start_ts, end_ts, alert_msg) values (%s, %s, %s, %s)"""
         q_args = (self.id, self.state_ts, 0, self.msg)
-        await cur.execute(q, q_args)
+        await cur.execute(self.manager.dbcon.prep_query(q), q_args)
         self.alert_id = cur.lastrowid
 
     async def txn_close_alert(self, cur: sql.Cursor) -> None:
         q = """update active_monitor_alerts set end_ts=%s where id=%s"""
         q_args = (self.state_ts, self.alert_id)
-        await cur.execute(q, q_args)
+        await cur.execute(self.manager.dbcon.prep_query(q), q_args)
         self.alert_id = None
 
     async def txn_save_state(self, cur: sql.Cursor) -> None:
         q = """update active_monitors set state=%s, state_ts=%s, msg=%s, alert_id=%s where id=%s"""
         q_args = (self.state, self.state_ts, self.msg, self.alert_id, self.id)
-        await cur.execute(q, q_args)
+        await cur.execute(self.manager.dbcon.prep_query(q), q_args)
 
     async def delete(self) -> None:
         """Delete an existing monitor.
@@ -637,8 +636,8 @@ class ActiveMonitor(log.LoggingMixin):
         if self.id in self.manager.monitors:
             del self.manager.monitors[self.id]
         if self.monitoring:
-            q = """update active_monitors set deleted=true where id=%s"""
-            q_args = (int(time.time()), self.id,)
+            q = """update active_monitors set deleted=%s where id=%s"""
+            q_args = (True, self.id)
             await self.manager.dbcon.operation(q, q_args)
         else:
             await self._purge()
@@ -651,20 +650,19 @@ class ActiveMonitor(log.LoggingMixin):
         await active_sql.delete_active_monitor(self.manager.dbcon, self.id)
 
     async def update_args(self, args: Dict[str, str]) -> None:
-        async def _run(cur: sql.Cursor) -> None:
-            q = """delete from active_monitor_args where monitor_id=%s"""
-            q_args = (self.id,)  # type: Tuple
-            await cur.execute(q, q_args)
-            q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
-            for name, value in args.items():
-                q_args = (self.id, name, value)
-                await cur.execute(q, q_args)
-
         self.log_msg('updating monitor arguments')
         self.monitor_def.validate_monitor_args(args)
         self.args = args
         self.monitor_def.tmpl_cache.flush_monitor(self)
-        await self.manager.dbcon.transact(_run)
+        queries = []
+        q = """delete from active_monitor_args where monitor_id=%s"""
+        q_args = (self.id,)  # type: Tuple
+        queries.append((q, q_args))
+        q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
+        for name, value in args.items():
+            q_args = (self.id, name, value)
+            queries.append((q, q_args))
+        await self.manager.dbcon.multi_operation(queries)
 
     async def set_checks_enabled_status(self, checks_enabled: bool) -> None:
         if self.checks_enabled == checks_enabled:
@@ -725,9 +723,9 @@ async def remove_deleted_monitors(dbcon: DBConnection) -> None:
 
     This runs once every time the server starts up.
     """
-    log.msg('Purging all deleted active monitor')
-    q = """select id from active_monitors where deleted=true"""
-    rows = await dbcon.fetch_all(q)
+    log.msg('Purging all deleted active monitors')
+    q = """select id from active_monitors where deleted=%s"""
+    rows = await dbcon.fetch_all(q, (True,))
     for monitor_id in rows:
         await active_sql.delete_active_monitor(dbcon, monitor_id)
 

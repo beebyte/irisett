@@ -37,18 +37,16 @@ async def update_contact(dbcon: DBConnection, contact_id: int, data: Dict[str, s
     Data is a dict with name/email/phone/active values that
     will be updated.
     """
-
-    async def _run(cur: Cursor) -> None:
-        for key, value in data.items():
-            if key not in ['name', 'email', 'phone', 'active']:
-                raise errors.IrisettError('invalid contact key %s' % key)
-            q = """update contacts set %s=%%s where id=%%s""" % key
-            q_args = (value, contact_id)
-            await cur.execute(q, q_args)
-
     if not await contact_exists(dbcon, contact_id):
         raise errors.InvalidArguments('contact does not exist')
-    await dbcon.transact(_run)
+    queries = []
+    for key, value in data.items():
+        if key not in ['name', 'email', 'phone', 'active']:
+            raise errors.IrisettError('invalid contact key %s' % key)
+        q = """update contacts set %s=%%s where id=%%s""" % key
+        q_args = (value, contact_id)
+        queries.append((q, q_args))
+    await dbcon.multi_operation(queries)
 
 
 async def delete_contact(dbcon: DBConnection, contact_id: int) -> None:
@@ -72,18 +70,16 @@ async def update_contact_group(dbcon: DBConnection, contact_group_id: int, data:
 
     Data is a dict with name/active values that will be updated.
     """
-
-    async def _run(cur: Cursor) -> None:
-        for key, value in data.items():
-            if key not in ['name', 'active']:
-                raise errors.IrisettError('invalid contact key %s' % key)
-            q = """update contact_groups set %s=%%s where id=%%s""" % key
-            q_args = (value, contact_group_id)
-            await cur.execute(q, q_args)
-
     if not await contact_group_exists(dbcon, contact_group_id):
         raise errors.InvalidArguments('contact group does not exist')
-    await dbcon.transact(_run)
+    queries = []
+    for key, value in data.items():
+        if key not in ['name', 'active']:
+            raise errors.IrisettError('invalid contact key %s' % key)
+        q = """update contact_groups set %s=%%s where id=%%s""" % key
+        q_args = (value, contact_group_id)
+        queries.append((q, q_args))
+    await dbcon.multi_operation(queries)
 
 
 async def delete_contact_group(dbcon: DBConnection, contact_group_id: int) -> None:
@@ -204,17 +200,16 @@ async def set_active_monitor_contacts(dbcon: DBConnection,
     contacts.
     """
 
-    async def _run(cur: Cursor) -> None:
-        q = """delete from active_monitor_contacts where active_monitor_id=%s"""
-        await cur.execute(q, (monitor_id,))
-        for contact_id in contact_ids:
-            q = """insert into active_monitor_contacts (active_monitor_id, contact_id) values (%s, %s)"""
-            q_args = (monitor_id, contact_id)
-            await cur.execute(q, q_args)
-
     if not await active_monitor_exists(dbcon, monitor_id):
         raise errors.InvalidArguments('monitor does not exist')
-    await dbcon.transact(_run)
+    queries = []
+    q = """delete from active_monitor_contacts where active_monitor_id=%s"""
+    queries.append((q, (monitor_id,)))
+    for contact_id in contact_ids:
+        q = """insert into active_monitor_contacts (active_monitor_id, contact_id) values (%s, %s)"""
+        q_args = (monitor_id, contact_id)
+        queries.append((q, q_args))
+    await dbcon.multi_operation(queries)
 
 
 async def get_contacts_for_active_monitor(dbcon: DBConnection, monitor_id: int) -> Iterable[object_models.Contact]:
@@ -256,18 +251,16 @@ async def set_active_monitor_contact_groups(dbcon: DBConnection,
     Delete existing contact groups for an active monitor and set the given new
     contact groups.
     """
-
-    async def _run(cur: Cursor) -> None:
-        q = """delete from active_monitor_contact_groups where active_monitor_id=%s"""
-        await cur.execute(q, (monitor_id,))
-        for contact_group_id in contact_group_ids:
-            q = """insert into active_monitor_contact_groups (active_monitor_id, contact_group_id) values (%s, %s)"""
-            q_args = (monitor_id, contact_group_id)
-            await cur.execute(q, q_args)
-
     if not await active_monitor_exists(dbcon, monitor_id):
         raise errors.InvalidArguments('monitor does not exist')
-    await dbcon.transact(_run)
+    queries = []
+    q = """delete from active_monitor_contact_groups where active_monitor_id=%s"""
+    queries.append((q, (monitor_id,)))
+    for contact_group_id in contact_group_ids:
+        q = """insert into active_monitor_contact_groups (active_monitor_id, contact_group_id) values (%s, %s)"""
+        q_args = (monitor_id, contact_group_id)
+        queries.append(q, q_args)
+    await dbcon.multi_operation(queries)
 
 
 async def get_contact_groups_for_active_monitor(
@@ -332,18 +325,16 @@ async def set_contact_group_contacts(dbcon: DBConnection,
     Delete existing contacts for a contact group and set the given new
     contacts.
     """
-
-    async def _run(cur: Cursor) -> None:
-        q = """delete from contact_group_contacts where contact_group_id=%s"""
-        await cur.execute(q, (contact_group_id,))
-        for contact_id in contact_ids:
-            q = """insert into contact_group_contacts (contact_group_id, contact_id) values (%s, %s)"""
-            q_args = (contact_group_id, contact_id)
-            await cur.execute(q, q_args)
-
     if not await contact_group_exists(dbcon, contact_group_id):
         raise errors.InvalidArguments('contact group does not exist')
-    await dbcon.transact(_run)
+    queries = []
+    q = """delete from contact_group_contacts where contact_group_id=%s"""
+    queries.append((q, (contact_group_id,)))
+    for contact_id in contact_ids:
+        q = """insert into contact_group_contacts (contact_group_id, contact_id) values (%s, %s)"""
+        q_args = (contact_group_id, contact_id)
+        queries.append(q, q_args)
+    await dbcon.multi_operation(queries)
 
 
 async def get_contacts_for_contact_group(dbcon: DBConnection, contact_group_id: int) -> Iterable[object_models.Contact]:

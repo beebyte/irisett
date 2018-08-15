@@ -202,7 +202,7 @@ SQL_MONITOR_DEFS = [
         values (
             "Ping monitor",
             "Monitor an IP using ICMP echo request packets.",
-            True,
+            true,
             "/usr/lib/nagios/plugins/check_ping",
             "-H {{hostname}} -w {{rtt}},{{pl}}% -c {{rtt}},{{pl}}%",
             "Ping monitor for {{hostname}}"

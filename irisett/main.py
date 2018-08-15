@@ -10,8 +10,8 @@ import asyncio
 
 from irisett import (
     log,
-    sql,
     stats,
+    sql,
 )
 from irisett.monitor.active import ActiveMonitorManager
 from irisett.notify.manager import NotificationManager
@@ -66,6 +66,24 @@ async def mainloop(loop: asyncio.AbstractEventLoop, config: configparser.ConfigP
         await asyncio.sleep(10)
 
 
+def init_database(config: configparser.ConfigParser) -> sql.DBConnection:
+    dbcon = None
+    if 'type' not in config or config['type'] == 'mysql':
+        import irisett.sql.db_mysql
+        dbcon = irisett.sql.db_mysql.DBConnection(
+            config['host'],
+            config['username'],
+            config['password'],
+            config['dbname'])
+    elif config['type'] == 'sqlite':
+        import irisett.sql.db_sqlite
+        dbcon = irisett.sql.db_sqlite.DBConnection(config['filename'])
+    else:
+        log.msg('Invalid DB type %s' % (config['type']))
+    return dbcon
+
+
+
 # noinspection PyUnresolvedReferences
 def main() -> None:
     """Do all setup that doesn't require the event loop, then start it."""
@@ -78,11 +96,9 @@ def main() -> None:
         debug_mode)
     if debug_mode:
         log.debug('Debug mode enabled')
-    dbcon = sql.DBConnection(
-        config['DATABASE']['host'],
-        config['DATABASE']['username'],
-        config['DATABASE']['password'],
-        config['DATABASE']['dbname'])
+    dbcon = init_database(config['DATABASE'])
+    if not dbcon:
+        return
     notification_cfg = None
     if config.has_section('NOTIFICATIONS'):
         notification_cfg = config['NOTIFICATIONS']
