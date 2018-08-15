@@ -1,12 +1,10 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f6348faba6deb84d4962985a3056fa6b22d8253a676e51042ca2496856056c72"
+            "sha256": "055662c16ff0365c0787d0976838ba7c78e3234ea9450b95fc96b8f1752b7b75"
         },
         "pipfile-spec": 6,
-        "requires": {
-            "python_version": "3.6"
-        },
+        "requires": {},
         "sources": [
             {
                 "name": "pypi",
@@ -327,5 +325,46 @@
             "version": "==1.2.6"
         }
     },
-    "develop": {}
+    "develop": {
+        "aiosqlite": {
+            "hashes": [
+                "sha256:9eceb678e49b48fbd580e7f0a9c750655b1707b9f44f5a88fb4f05329c3175ee"
+            ],
+            "index": "pypi",
+            "version": "==0.3.0"
+        },
+        "altgraph": {
+            "hashes": [
+                "sha256:d6814989f242b2b43025cba7161fc1b8fb487a62cd49c49245d6fd01c18ac997",
+                "sha256:ddf5320017147ba7b810198e0b6619bd7b5563aa034da388cea8546b877f9b0c"
+            ],
+            "version": "==0.16.1"
+        },
+        "future": {
+            "hashes": [
+                "sha256:e39ced1ab767b5936646cedba8bcce582398233d6a627067d4c6a454c90cfedb"
+            ],
+            "version": "==0.16.0"
+        },
+        "macholib": {
+            "hashes": [
+                "sha256:9485686b89d357f4a99fda5a12349b261ecf2baedd526d2c9b6397167a507e90",
+                "sha256:a8941ff2cf2519859ed64d1248782442c98f5e1e28a1c331911d5501f74b7b37"
+            ],
+            "version": "==1.10"
+        },
+        "pefile": {
+            "hashes": [
+                "sha256:4c5b7e2de0c8cb6c504592167acf83115cbbde01fe4a507c16a1422850e86cd6"
+            ],
+            "version": "==2018.8.8"
+        },
+        "pyinstaller": {
+            "hashes": [
+                "sha256:715f81f24b1ef0e5fe3b3c71e7540551838e46e9de30882aa7c0a521147fd1ce"
+            ],
+            "index": "pypi",
+            "version": "==3.3.1"
+        }
+    }
 }
