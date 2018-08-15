@@ -32,9 +32,6 @@ from irisett.metadata import get_metadata
 from irisett.notify.manager import NotificationManager
 from irisett.sql import DBConnection
 
-DEFAULT_MONITOR_INTERVAL = 180
-DOWN_THRESHOLD = 3
-# DOWN_THRESHOLD = 0
 UNKNOWN_THRESHOLD = 5
 
 
@@ -115,11 +112,14 @@ class ActiveMonitorManager:
     """
 
     def __init__(self, dbcon: DBConnection, notification_manager: NotificationManager,
-                 max_concurrent_jobs: int, *, debug_mode: bool = False, loop: asyncio.AbstractEventLoop = None) -> None:
+            max_concurrent_jobs: int, default_monitor_interval: int, default_down_threshold: int, *,
+            debug_mode: bool = False, loop: asyncio.AbstractEventLoop = None) -> None:
         self.loop = loop or asyncio.get_event_loop()
         self.dbcon = dbcon
         self.notification_manager = notification_manager
         self.max_concurrent_jobs = max_concurrent_jobs
+        self.default_monitor_interval = default_monitor_interval
+        self.default_down_threshold = default_down_threshold
         self.debug_mode = debug_mode
         if debug_mode:
             log.debug('Debug mode active, all monitors will be started immediately')
@@ -149,7 +149,7 @@ class ActiveMonitorManager:
         for monitor in self.monitors.values():
             start_delay = 0
             if not self.debug_mode:
-                start_delay = random.randint(1, DEFAULT_MONITOR_INTERVAL)
+                start_delay = random.randint(1, self.default_monitor_interval)
             self.schedule_monitor(monitor, start_delay)
         # self.scheduleMonitor(monitor, 0)
         self.check_missing_schedules()
@@ -165,7 +165,7 @@ class ActiveMonitorManager:
         for monitor in self.monitors.values():
             if not monitor.deleted and not monitor.monitoring and not monitor.scheduled_job:
                 log.msg('%s is missing scheduled job, this is probably a bug, scheduling now' % monitor)
-                self.schedule_monitor(monitor, DEFAULT_MONITOR_INTERVAL)
+                self.schedule_monitor(monitor, self.default_monitor_interval)
 
     def run_monitor(self, monitor_id: int) -> None:
         """Run self._run_monitor.
@@ -196,7 +196,7 @@ class ActiveMonitorManager:
             self.num_running_jobs -= 1
             log.msg('Monitor run raised error: %s' % (str(e)))
             if not monitor.scheduled_job:
-                self.schedule_monitor(monitor, DEFAULT_MONITOR_INTERVAL)
+                self.schedule_monitor(monitor, self.default_monitor_interval)
             raise
         self.num_running_jobs -= 1
         stats.dec('cur_running_jobs', 'ACT_MON')
@@ -395,6 +395,8 @@ class ActiveMonitor(log.LoggingMixin):
         self.monitor_def = monitor_def
         self.state = state
         self.manager = manager
+        self.monitor_interval = manager.default_monitor_interval
+        self.down_threshold = manager.default_down_threshold
         self.last_check_state = None  # type: Optional[str]
         self.consecutive_checks = 0
         self.last_check = time.time()
@@ -456,7 +458,7 @@ class ActiveMonitor(log.LoggingMixin):
             await self.reset_monitor()
         if not self.checks_enabled:
             self.log_debug('skipping monitor check, disabled')
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+            self.manager.schedule_monitor(self, self.monitor_interval)
             return
         expanded_args = self.get_expanded_args()
         self.log_debug('monitoring: %s %s' % (self.monitor_def.cmdline_filename, expanded_args))
@@ -492,33 +494,33 @@ class ActiveMonitor(log.LoggingMixin):
             # Introduce a slight variation in monitoring intervals when
             # everything is going ok for a monitor. This will help spread
             # the service check times out.
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL + random.randint(-5, 5))
+            self.manager.schedule_monitor(self, self.monitor_interval + random.randint(-5, 5))
             stats.inc('checks_up', 'ACT_MON')
         elif check_state == 'UP' and self.state != 'UP':
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+            self.manager.schedule_monitor(self, self.monitor_interval)
             await self.state_change('UP', msg)
             stats.inc('checks_up', 'ACT_MON')
         elif check_state == 'DOWN' and self.state == 'DOWN':
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+            self.manager.schedule_monitor(self, self.monitor_interval)
             stats.inc('checks_down', 'ACT_MON')
         elif check_state == 'DOWN' and self.state == 'UNKNOWN':
             await self.state_change('DOWN', msg)
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+            self.manager.schedule_monitor(self, self.monitor_interval)
             stats.inc('checks_down', 'ACT_MON')
         elif check_state == 'DOWN' and self.state != 'DOWN':
-            if self.consecutive_checks >= DOWN_THRESHOLD:
+            if self.consecutive_checks >= self.down_threshold:
                 await self.state_change('DOWN', msg)
-                self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+                self.manager.schedule_monitor(self, self.monitor_interval)
             else:
                 self.manager.schedule_monitor(self, 30)
             stats.inc('checks_down', 'ACT_MON')
         elif check_state == 'UNKNOWN' and self.state == 'UNKNOWN':
-            self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+            self.manager.schedule_monitor(self, self.monitor_interval)
             stats.inc('checks_unknown', 'ACT_MON')
         elif check_state == 'UNKNOWN' and self.state != 'UNKNOWN':
             if self.consecutive_checks >= UNKNOWN_THRESHOLD:
                 await self.state_change('UNKNOWN', msg)
-                self.manager.schedule_monitor(self, DEFAULT_MONITOR_INTERVAL)
+                self.manager.schedule_monitor(self, self.monitor_interval)
             else:
                 self.manager.schedule_monitor(self, 120)
             stats.inc('checks_unknown', 'ACT_MON')

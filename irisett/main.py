@@ -109,6 +109,8 @@ def main() -> None:
         dbcon,
         notification_manager,
         int(config.get('ACTIVE-MONITORS', 'max-concurrent-jobs', fallback='200')),
+        int(config.get('ACTIVE-MONITORS', 'default-monitor-interval', fallback='180')),
+        int(config.get('ACTIVE-MONITORS', 'default-down-threshold', fallback='3')),
         debug_mode=debug_mode,
     )
     loop = asyncio.get_event_loop()
