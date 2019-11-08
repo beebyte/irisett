@@ -6,7 +6,7 @@ without setting the contact(s) for each monitor.
 """
 
 from typing import Optional, Dict, Any, Iterable
-from irisett.sql import DBConnection, Cursor
+from irisett.sql import DBConnection
 from irisett import (
     errors,
     object_models,
