@@ -144,3 +144,13 @@ class MonitorGroup:
     parent_id = attr.ib()
     name = attr.ib()
     model_type = "monitor_group"
+
+
+@attr.s
+class ActiveMonitorResult:
+    id = attr.ib()
+    monitor_id = attr.ib()
+    timestamp = attr.ib()
+    state = attr.ib()
+    result_msg = attr.ib()
+    model_type = "active_monitor_result"

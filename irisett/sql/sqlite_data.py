@@ -62,6 +62,7 @@ SQL_TABLES = [
             `id` INTEGER PRIMARY KEY NOT NULL,
             `monitor_id` int not null,
             `timestamp` int not null,
+            `state` varchar(10) not null,
             `result_msg` varchar(200) not null,
         )
         """,
@@ -318,5 +319,8 @@ SQL_UPGRADES = {
                 `result_msg` varchar(200) not null,
             )
             """,
-    ]
+    ],
+    3: [
+        """ALTER TABLE `active_monitor_results` ADD `state` varchar(10) NOT NULL AFTER `timestamp`""",
+    ],
 }

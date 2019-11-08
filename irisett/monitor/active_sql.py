@@ -177,3 +177,29 @@ async def update_active_monitor_def_arg(
 async def delete_active_monitor_def_arg(dbcon: DBConnection, arg_id: int) -> None:
     q = """delete from active_monitor_def_args where id=%s"""
     await dbcon.operation(q, (arg_id,))
+
+
+async def create_active_monitor_result(
+    dbcon: DBConnection, model: object_models.ActiveMonitorResult
+) -> int:
+    q = """insert into active_monitor_results
+        (monitor_id, timestamp, state, result_msg)
+        values (%s, %s, %s, %s)"""
+    result_id = await dbcon.operation(q, object_models.insert_values(model))
+    return result_id
+
+
+async def purge_active_monitor_results(
+    dbcon: DBConnection, timestamp: int
+) -> int:
+    q = """delete from active_monitor_results where timestamp < %s"""
+    await dbcon.operation(q, timestamp)
+
+
+async def get_active_monitor_results_for_monitor(
+    dbcon: DBConnection, monitor_id: int
+) -> Iterable[object_models.ActiveMonitorResult]:
+    """Load monitor results from the database."""
+    q = """select id, monitor_id, timestamp, state, result_msg
+        from active_monitor_results where monitor_id=%s order by timestamp desc"""
+    return [object_models.ActiveMonitorResult(*row) for row in await dbcon.fetch_all(q, (monitor_id,))]

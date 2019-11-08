@@ -6,7 +6,7 @@ irisett starts up.
 
 # The current active version of the database, increase when making changes
 # and create upgrade queries in SQL_UPGRADES below.
-CUR_VERSION = 6
+CUR_VERSION = 7
 
 SQL_VERSION = [
     """insert into version (version) values ('%s')""" % str(CUR_VERSION),
@@ -64,6 +64,7 @@ SQL_TABLES = [
             `id` int not null auto_increment,
             `monitor_id` int not null,
             `timestamp` int not null,
+            `state` varchar(10) NOT NULL,
             `result_msg` varchar(200) not null,
             primary key (`id`),
             key `monitor_id_idx` (`monitor_id`)
@@ -315,5 +316,8 @@ SQL_UPGRADES = {
     ],
     6: [
         """ALTER TABLE `active_monitor_results` ADD INDEX `timestamp_idx` (`timestamp`)""",
+    ],
+    7: [
+        """ALTER TABLE `active_monitor_results` ADD `state` varchar(10) NOT NULL AFTER `timestamp`""",
     ],
 }

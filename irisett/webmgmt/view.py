@@ -163,6 +163,21 @@ async def send_active_monitor_test_notification(request: web.Request) -> web.Res
     )
 
 
+class ListActiveMonitorResultsView(web.View):
+    @aiohttp_jinja2.template("list_active_monitor_results.html")
+    async def get(self) -> Dict[str, Any]:
+        monitor_id = int(self.request.match_info["id"])
+        context = {
+            "section": "active_monitor",
+            "results": await active_sql.get_active_monitor_results_for_monitor(
+                self.request.app["dbcon"], monitor_id
+            ),
+        }
+        for result in context['results']:
+            result.ts_time = time.ctime(result.timestamp)
+        return context
+
+
 class ListActiveMonitorDefsView(web.View):
     @aiohttp_jinja2.template("list_active_monitor_defs.html")
     async def get(self) -> Dict[str, Any]:

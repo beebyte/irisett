@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block body %}
+    <table class="table table-striped">
+        <tr>
+            <th>Timestamp</th>
+            <th>State</th>
+            <th>Result</th>
+        </tr>
+
+        {% for result in results %}
+            <tr>
+                <td>{{ result.ts_time }}</td>
+                <td>{{ result.state }}</td>
+                <td>{{ result.result_msg }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

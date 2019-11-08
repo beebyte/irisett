@@ -114,7 +114,7 @@ async def map_monitor_args_to_monitors(
     return ret
 
 
-class ActiveMonitorManager:
+class ActiveMonitorManager(log.LoggingMixin):
     """The manager and main loop for active monitors.
 
     The monitor manager keeps track of monitor definitions and monitors.
@@ -129,6 +129,7 @@ class ActiveMonitorManager:
         max_concurrent_jobs: int,
         default_monitor_interval: int,
         default_down_threshold: int,
+        result_retention_period: int,
         *,
         debug_mode: bool = False,
         loop: asyncio.AbstractEventLoop = None
@@ -139,6 +140,7 @@ class ActiveMonitorManager:
         self.max_concurrent_jobs = max_concurrent_jobs
         self.default_monitor_interval = default_monitor_interval
         self.default_down_threshold = default_down_threshold
+        self.result_retention_period = result_retention_period
         self.debug_mode = debug_mode
         if debug_mode:
             log.debug("Debug mode active, all monitors will be started immediately")
@@ -172,6 +174,22 @@ class ActiveMonitorManager:
             self.schedule_monitor(monitor, start_delay)
         # self.scheduleMonitor(monitor, 0)
         self.check_missing_schedules()
+        if self.result_retention_period:
+            self.loop.call_later(10, self.purge_monitor_results)
+
+    def purge_monitor_results(self) -> None:
+        """Purge old monitor results.
+
+        This loop is only started if self.result_retention_period is set
+        when the monitor manager starts.
+        """
+        self.log_msg("purging old monitor results")
+        self.loop.call_later(1800, self.purge_monitor_results)
+        age = int(time.time()) - (self.result_retention_period * 60 * 60)
+        asyncio.ensure_future(self._purge_monitor_results(age))
+
+    async def _purge_monitor_results(self, age) -> None:
+        await active_sql.purge_active_monitor_results(self.dbcon, age)
 
     def check_missing_schedules(self) -> None:
         """Failsafe to check that no monitors are missing scheduled checks.
@@ -605,6 +623,20 @@ class ActiveMonitor(log.LoggingMixin):
             check_state=check_state,
             msg=msg,
         )
+        await self._save_monitor_result(check_state, msg)
+
+    async def _save_monitor_result(self, check_state: str, msg: str):
+        """Store the result of a monitor run.
+
+        Results are only stored if a max retention time is set. This is not
+        standard and can result in a lot of data in the database.
+        """
+        if not self.manager.result_retention_period:
+            return
+        result = object_models.ActiveMonitorResult(
+            id=None, monitor_id=self.id, timestamp=int(time.time()), state=check_state, result_msg=msg,
+        )
+        await active_sql.create_active_monitor_result(self.manager.dbcon, result)
 
     async def _set_monitor_checks_disabled(self) -> None:
         self.state = "UNKNOWN"
