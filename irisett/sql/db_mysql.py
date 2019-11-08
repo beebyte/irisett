@@ -14,7 +14,7 @@ from irisett import (
     stats,
 )
 
-from irisett.sql import mysql_data sql_data
+from irisett.sql import mysql_data as sql_data
 import irisett.sql.base
 
 
