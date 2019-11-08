@@ -118,7 +118,7 @@ async def delete_active_monitor(dbcon: DBConnection, monitor_id: int) -> None:
             """delete from object_bindata where object_type="active_monitor" and object_id=%s""",
             q_args,
         ),
-        ("""delete from active_monitor_groups where active_monitor_id=%s""", q_args),
+        ("""delete from monitor_group_active_monitors where active_monitor_id=%s""", q_args),
     ]
     await dbcon.multi_operation(queries)
 
