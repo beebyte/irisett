@@ -300,5 +300,4 @@ SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
 # Queries to run when upgrade the database.
 # Add a new section for each version, ie:
 # { VERSION: [COMMANDS ...]
-SQL_UPGRADES = {
-}
+SQL_UPGRADES = {}

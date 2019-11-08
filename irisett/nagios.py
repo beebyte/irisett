@@ -29,13 +29,16 @@ STATUS_UNKNOWN = 3
 
 
 # noinspection PyUnusedLocal
-async def run_plugin(executable: str, args: List[str], timeout: int) -> Tuple[str, List[str]]:
+async def run_plugin(
+    executable: str, args: List[str], timeout: int
+) -> Tuple[str, List[str]]:
     run_args = [executable] + args
     try:
         proc = await asyncio.create_subprocess_exec(
-            *run_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+            *run_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
     except FileNotFoundError:
-        raise NagiosError('executable not found')
+        raise NagiosError("executable not found")
     stdin_data, stderr_data = await proc.communicate()
     std_data = stdin_data + stderr_data
     await proc.wait()
@@ -53,12 +56,12 @@ def parse_plugin_output(output: Union[str, bytes]) -> Tuple[str, List[str]]:
     Splits the data into a text string and performance data.
     """
     output = decode_plugin_output(output)
-    if '|' not in output:
+    if "|" not in output:
         text = output
         perf = []  # type: List[str]
     else:
-        text, _perf = output.split('|', 1)
-        perf = _perf.split('|')
+        text, _perf = output.split("|", 1)
+        perf = _perf.split("|")
     text = text.strip()
     return text, perf
 
@@ -68,8 +71,8 @@ def decode_plugin_output(output: Union[str, bytes]) -> str:
     try:
         if type(output) == bytes:
             output = cast(bytes, output)
-            output = output.decode('latin-1', 'replace')
+            output = output.decode("latin-1", "replace")
     except Exception as e:
-        log.debug('nagios.encode_monitor_output: error: %s' % str(e))
-        output = ''
+        log.debug("nagios.encode_monitor_output: error: %s" % str(e))
+        output = ""
     return cast(str, output)

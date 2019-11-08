@@ -54,7 +54,7 @@ class ActiveMonitorAlert:
     end_ts = ...  # type: Any
     alert_msg = ...  # type: Any
     model_type = ...  # type: str
-    monitor = ... # type: Any
+    monitor = ...  # type: Any
     def __init__(*args: Any, **kwargs: Any) -> None: ...
 
 class ActiveMonitorDef:
