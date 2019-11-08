@@ -7,7 +7,6 @@ it.
 from typing import Optional, Iterable, Any, List, Callable
 import asyncio
 import aiomysql
-from aiomysql import Cursor
 
 from irisett import (
     log,
