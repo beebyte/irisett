@@ -4,11 +4,9 @@ These tables are automatically created if they are missing when
 irisett starts up.
 """
 
-from irisett.sql import mysql_data
-
 # The current active version of the database, increase when making changes
 # and create upgrade queries in SQL_UPGRADES below.
-CUR_VERSION = 1
+CUR_VERSION = 2
 
 SQL_VERSION = [
     """insert into version (version) values ('%s')""" % str(CUR_VERSION),
@@ -56,6 +54,15 @@ SQL_TABLES = [
             `start_ts` int not null,
             `end_ts` int not null,
             `alert_msg` varchar(200) not null
+        )
+        """,
+    """
+        create table active_monitor_results
+        (
+            `id` INTEGER PRIMARY KEY NOT NULL,
+            `monitor_id` int not null,
+            `timestamp` int not null,
+            `result_msg` varchar(200) not null,
         )
         """,
     """
@@ -300,4 +307,16 @@ SQL_ALL = SQL_TABLES + SQL_VERSION + SQL_MONITOR_DEFS + SQL_MONITORS
 # Queries to run when upgrade the database.
 # Add a new section for each version, ie:
 # { VERSION: [COMMANDS ...]
-SQL_UPGRADES = {}
+SQL_UPGRADES = {
+    2: [
+        """
+            create table active_monitor_results
+            (
+                `id` INTEGER PRIMARY KEY NOT NULL,
+                `monitor_id` int not null,
+                `timestamp` int not null,
+                `result_msg` varchar(200) not null,
+            )
+            """,
+    ]
+}
