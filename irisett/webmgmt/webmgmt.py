@@ -42,6 +42,7 @@ def setup_routes(app: web.Application) -> None:
         view.send_active_monitor_test_notification,
     )
     r("GET", "/active_monitor/{id}/results/", view.ListActiveMonitorResultsView)
+    r("GET", "/active_monitor/{id}/alerts/", view.ListActiveMonitorAlertsView)
     r("*", "/active_monitor_def/", view.ListActiveMonitorDefsView)
     r("*", "/active_monitor_def/{id}/", view.DisplayActiveMonitorDefView)
     r("*", "/contact/", view.ListContactsView)

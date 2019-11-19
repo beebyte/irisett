@@ -178,6 +178,27 @@ class ListActiveMonitorResultsView(web.View):
         return context
 
 
+class ListActiveMonitorAlertsView(web.View):
+    @aiohttp_jinja2.template("list_active_monitor_alerts.html")
+    async def get(self) -> Dict[str, Any]:
+        monitor_id = int(self.request.match_info["id"])
+        context = {
+            "section": "active_monitor",
+            "alerts": await self._get_active_monitor_alerts(monitor_id)
+        }
+        return context
+
+    async def _get_active_monitor_alerts(
+        self, monitor_id,
+    ) -> List[object_models.ActiveMonitorAlert]:
+        q = """select id, monitor_id, start_ts, end_ts, alert_msg from active_monitor_alerts where monitor_id=%s order by start_ts desc"""
+        alerts = []  # type: List[object_models.ActiveMonitorAlert]
+        for row in await self.request.app["dbcon"].fetch_all(q, (monitor_id,)):
+            alert = object_models.ActiveMonitorAlert(*row)
+            alerts.append(alert)
+        return alerts
+
+
 class ListActiveMonitorDefsView(web.View):
     @aiohttp_jinja2.template("list_active_monitor_defs.html")
     async def get(self) -> Dict[str, Any]:
