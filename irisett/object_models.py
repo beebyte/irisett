@@ -73,6 +73,7 @@ class ActiveMonitor:
     deleted = attr.ib()
     checks_enabled = attr.ib()
     alerts_enabled = attr.ib()
+    alias = attr.ib()
     args = attr.ib(init=False, default=attr.Factory(dict))
     model_type = "active_monitor"
 

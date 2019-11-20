@@ -59,7 +59,7 @@ async def get_all_active_monitors(
     dbcon: DBConnection,
 ) -> Iterable[object_models.ActiveMonitor]:
     """Load monitors from the database."""
-    q = """select id, def_id, state, state_ts, msg, alert_id, deleted, checks_enabled, alerts_enabled
+    q = """select id, def_id, state, state_ts, msg, alert_id, deleted, checks_enabled, alerts_enabled, alias
             from active_monitors"""
     return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q)]
 

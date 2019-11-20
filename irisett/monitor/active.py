@@ -94,6 +94,7 @@ async def load_monitors(manager: "ActiveMonitorManager") -> Dict[int, "ActiveMon
             monitor.alert_id,
             monitor.checks_enabled,
             monitor.alerts_enabled,
+            monitor.alias,
             manager,
         )
     return monitors
@@ -467,6 +468,7 @@ class ActiveMonitor(log.LoggingMixin):
         alert_id: Union[int, None],
         checks_enabled: bool,
         alerts_enabled: bool,
+        alias: Union[str, None],
         manager: ActiveMonitorManager,
     ) -> None:
         self.id = id
@@ -488,6 +490,7 @@ class ActiveMonitor(log.LoggingMixin):
         self.deleted = False
         self.checks_enabled = checks_enabled
         self.alerts_enabled = alerts_enabled
+        self.alias = alias
         self._pending_reset = False
         self.scheduled_job = None  # type: Optional[asyncio.Handle]
         self.scheduled_job_ts = 0.0
@@ -501,12 +504,15 @@ class ActiveMonitor(log.LoggingMixin):
             self.last_check_state,
         )
 
-    def get_description(self) -> str:
+    def get_description(self, skip_alias: bool = False) -> str:
         """Get a description for this monitor.
 
         The description is created from a template in the monitor defintion.
         """
-        ret = self.monitor_def.tmpl_cache.get(self, "description")
+        if self.alias and not skip_alias:
+            ret = self.alias
+        else:
+            ret = self.monitor_def.tmpl_cache.get(self, "description")
         if not ret:
             ret = self.monitor_def.tmpl_cache.set(
                 self,
@@ -801,6 +807,13 @@ class ActiveMonitor(log.LoggingMixin):
         self.alerts_enabled = alerts_enabled
         q = """update active_monitors set alerts_enabled=%s where id=%s"""
         q_args = (alerts_enabled, self.id)
+        await self.manager.dbcon.operation(q, q_args)
+
+    async def set_alias(self, alias: str) -> None:
+        self.log_debug("settings alias to %s" % alias)
+        self.alias = alias
+        q = """update active_monitors set alias=%s where id=%s"""
+        q_args = (alias, self.id)
         await self.manager.dbcon.operation(q, q_args)
 
     def schedule_immediately(self) -> None:

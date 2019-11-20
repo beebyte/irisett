@@ -77,6 +77,13 @@ def parse_args():
     cmd.set_defaults(func=disable_active_monitor_alerts)
 
     cmd = subparsers.add_parser(
+        "set-active-monitor-alias", help="Set an alias name for an active monitor"
+    )
+    cmd.add_argument("-i", "--monitor-id", type=int, required=True, help="Monitor id")
+    cmd.add_argument("--alias", required=True, help="Monitor alias")
+    cmd.set_defaults(func=set_active_monitor_alias)
+
+    cmd = subparsers.add_parser(
         "add-active-monitor-contact", help="Add active monitor contact"
     )
     cmd.add_argument("--monitor-id", required=True, help="Monitor id")
@@ -500,6 +507,19 @@ def enable_active_monitor_alerts(args):
 
 def disable_active_monitor_alerts(args):
     data = {"alerts_enabled": False}
+    url = "http://%s:%s/active_monitor/?id=%s" % (args.host, args.port, args.monitor_id)
+    request = requests.put(
+        url=url, data=json.dumps(data), auth=(args.user, args.password)
+    )
+    if request.status_code != 200:
+        print("ERROR(%s): %s" % (request.status_code, request.content.decode("utf-8")))
+    else:
+        res = json.loads(request.content.decode("utf-8"))
+        print(res)
+
+
+def set_active_monitor_alias(args):
+    data = {"alias": args.alias}
     url = "http://%s:%s/active_monitor/?id=%s" % (args.host, args.port, args.monitor_id)
     request = requests.put(
         url=url, data=json.dumps(data), auth=(args.user, args.password)

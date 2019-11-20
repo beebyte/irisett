@@ -10,7 +10,11 @@
     <table class="table kvp-table">
         <tr>
             <td>Name</td>
-            <td>{{ monitor.get_description() }}</td>
+            <td>{{ monitor.get_description(skip_alias=True) }}</td>
+        </tr>
+        <tr>
+            <td>Alias</td>
+            <td>{{ monitor.alias }}</td>
         </tr>
         <tr>
             <td>State</td>

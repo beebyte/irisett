@@ -187,10 +187,11 @@ class ActiveMonitorView(web.View):
             "alert_id": monitor.alert_id,
             "checks_enabled": monitor.checks_enabled,
             "alerts_enabled": monitor.alerts_enabled,
+            "alias": monitor.alias,
             "monitoring": monitor.monitoring,
             "args": monitor.args,
             "expanded_args": monitor.get_expanded_args(),
-            "monitor_description": monitor.get_description(),
+            "monitor_description": monitor.get_description(skip_alias=True),
             "monitor_def": {
                 "id": monitor.monitor_def.id,
                 "name": monitor.monitor_def.name,
@@ -259,6 +260,10 @@ class ActiveMonitorView(web.View):
         if "alerts_enabled" in request_data:
             await monitor.set_alerts_enabled_status(
                 cast(bool, require_bool(request_data["alerts_enabled"]))
+            )
+        if "alias" in request_data:
+            await monitor.set_alias(
+                require_str(request_data["alias"])
             )
         return web.json_response(True)
 
