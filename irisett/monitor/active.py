@@ -862,7 +862,7 @@ async def remove_deleted_monitors(dbcon: DBConnection) -> None:
 
 
 async def create_active_monitor(
-    manager: ActiveMonitorManager, args: Dict[str, str], monitor_def: ActiveMonitorDef
+    manager: ActiveMonitorManager, args: Dict[str, str], monitor_def: ActiveMonitorDef, alias: str,
 ) -> ActiveMonitor:
     monitor_def.validate_monitor_args(args)
     monitor_id = await active_sql.create_active_monitor(
@@ -878,6 +878,7 @@ async def create_active_monitor(
         alert_id=None,
         checks_enabled=True,
         alerts_enabled=True,
+        alias=alias,
         manager=manager,
     )
     log.msg("Created active monitor %s" % monitor)

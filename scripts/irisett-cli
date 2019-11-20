@@ -27,6 +27,7 @@ def parse_args():
         action="append",
         help="key:value argument pairs (repeat as necessary)",
     )
+    cmd.add_argument("--alias", required=False, help="Monitor alias")
     cmd.set_defaults(func=add_active_monitor)
 
     cmd = subparsers.add_parser("update-active-monitor", help="Update active monitor")
@@ -434,7 +435,10 @@ def add_active_monitor(args):
     data = {
         "monitor_def": args.monitor_def,
         "args": mon_args,
+        "alias": "",
     }
+    if args.alias:
+        data["alias"] = args.alias
     url = "http://%s:%s/active_monitor/" % (args.host, args.port)
     request = requests.post(
         url=url, data=json.dumps(data), auth=(args.user, args.password)

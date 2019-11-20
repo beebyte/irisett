@@ -220,7 +220,7 @@ class ActiveMonitorView(web.View):
         if not monitor_def:
             raise errors.InvalidData("Monitor def not found")
         monitor = await create_active_monitor(
-            self.request.app["active_monitor_manager"], args, monitor_def
+            self.request.app["active_monitor_manager"], args, monitor_def, require_str(request_data["alias"]),
         )
         if not monitor:
             raise errors.InvalidData("invalid monitor arguments")
