@@ -7,7 +7,7 @@ aiosmtplib==0.1.7
 async-timeout==1.1.0
 cchardet==1.1.1
 chardet==2.3.0
-Jinja2==2.8
+Jinja2==2.11.3
 MarkupSafe==0.23
 mccabe==0.5.2
 multidict==2.1.4
