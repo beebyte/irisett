@@ -31,9 +31,15 @@ class EventListener:
     that wants to listen for events. filters etc. are kept in the
     EventListener object.
     """
-    def __init__(self, tracer: 'EventTracer', callback: Callable, *,
-                 event_filter: Optional[List[str]] = None,
-                 active_monitor_filter: Optional[List[Union[str, int]]] = None) -> None:
+
+    def __init__(
+        self,
+        tracer: "EventTracer",
+        callback: Callable,
+        *,
+        event_filter: Optional[List[str]] = None,
+        active_monitor_filter: Optional[List[Union[str, int]]] = None
+    ) -> None:
         self.tracer = tracer
         self.callback = callback
         self.created = time.time()
@@ -44,7 +50,9 @@ class EventListener:
         self.event_filter = self._parse_filter_list(filter)
 
     def set_active_monitor_filter(self, filter: Optional[List]) -> None:
-        self.active_monitor_filter = self._parse_filter_list(self._parse_active_monitor_filter(filter))
+        self.active_monitor_filter = self._parse_filter_list(
+            self._parse_active_monitor_filter(filter)
+        )
 
     @staticmethod
     def _parse_active_monitor_filter(filter: Optional[List]) -> Any:
@@ -72,8 +80,12 @@ class EventListener:
         ret = True
         if self.event_filter and event_name not in self.event_filter:
             ret = False
-        elif self.active_monitor_filter and 'monitor' in args and args['monitor'].monitor_type == 'active' \
-                and args['monitor'].id not in self.active_monitor_filter:
+        elif (
+            self.active_monitor_filter
+            and "monitor" in args
+            and args["monitor"].monitor_type == "active"
+            and args["monitor"].id not in self.active_monitor_filter
+        ):
             ret = False
         return ret
 
@@ -84,30 +96,40 @@ class EventTracer:
     Creates listeners and receives events. When an event is received it
     is sent to all listeners (that matches the events filters.
     """
+
     def __init__(self) -> None:
         self.listeners = set()  # type: Set[EventListener]
-        stats.set('num_listeners', 0, 'EVENT')
-        stats.set('events_fired', 0, 'EVENT')
+        stats.set("num_listeners", 0, "EVENT")
+        stats.set("events_fired", 0, "EVENT")
         self.loop = asyncio.get_event_loop()
 
-    def listen(self, callback: Callable, *,
-               event_filter: Optional[List[str]] = None,
-               active_monitor_filter: Optional[List[Union[str, int]]] = None) -> EventListener:
+    def listen(
+        self,
+        callback: Callable,
+        *,
+        event_filter: Optional[List[str]] = None,
+        active_monitor_filter: Optional[List[Union[str, int]]] = None
+    ) -> EventListener:
         """Set a callback function that will receive events.
 
         Two filters can be used when selecting which events the callback will
         receive. event_filter can be a list of event names that must match.
         active_monitor_filter can be a list of active monitor ids that must match.
         """
-        stats.inc('num_listeners', 'EVENT')
-        listener = EventListener(self, callback, event_filter=event_filter, active_monitor_filter=active_monitor_filter)
+        stats.inc("num_listeners", "EVENT")
+        listener = EventListener(
+            self,
+            callback,
+            event_filter=event_filter,
+            active_monitor_filter=active_monitor_filter,
+        )
         self.listeners.add(listener)
         return listener
 
     def stop_listening(self, listener: EventListener) -> None:
         """Remove a callback from the listener list."""
         if listener in self.listeners:
-            stats.dec('num_listeners', 'EVENT')
+            stats.dec("num_listeners", "EVENT")
             self.listeners.remove(listener)
 
     def running(self, event_name: str, **kwargs: Any) -> None:
@@ -116,7 +138,7 @@ class EventTracer:
         Listener callbacks will be called with:
         callback(listener-dict, event-name, timestamp, arg-dict)
         """
-        stats.inc('events_fired', 'EVENT')
+        stats.inc("events_fired", "EVENT")
         if not self.listeners:
             return
         timestamp = time.time()
@@ -127,7 +149,7 @@ class EventTracer:
                 t = listener.callback(listener, event_name, timestamp, kwargs)
                 asyncio.ensure_future(t)
             except Exception as e:
-                log.msg('Failed to run event listener callback: %s' % str(e))
+                log.msg("Failed to run event listener callback: %s" % str(e))
 
 
 default_tracer = EventTracer()

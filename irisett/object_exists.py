@@ -8,7 +8,9 @@ from typing import Optional, Iterable
 from irisett.sql import DBConnection
 
 
-async def _object_exists(dbcon: DBConnection, query: str, query_args: Optional[Iterable]) -> bool:
+async def _object_exists(
+    dbcon: DBConnection, query: str, query_args: Optional[Iterable]
+) -> bool:
     res = await dbcon.fetch_single(query, query_args)
     if res == 0:
         return False

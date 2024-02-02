@@ -140,3 +140,5 @@ Session.vim
 *~
 # auto-generated tag files
 tags
+
+.mypy_cache

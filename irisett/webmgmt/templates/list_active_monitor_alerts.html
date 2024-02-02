@@ -1,0 +1,20 @@
+{% extends "alerts_base.html" %}
+{% block body %}
+    <table class="table table-striped">
+        <tr>
+            <th>ID</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Message</th>
+        </tr>
+
+        {% for alert in alerts %}
+            <tr>
+                <td>{{ alert.id }}</td>
+                <td>{{ alert.start_ts|timestamp }}</td>
+                <td>{{ alert.end_ts|timestamp }}</td>
+                <td>{{ alert.alert_msg[:100] }} [...]</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

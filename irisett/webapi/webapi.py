@@ -20,39 +20,54 @@ from irisett.monitor.active import ActiveMonitorManager
 
 
 def setup_routes(app: web.Application) -> None:
-    app.router.add_route('*', '/active_monitor/', view.ActiveMonitorView)
-    app.router.add_route('*', '/active_monitor_alert/', view.ActiveMonitorAlertView)
-    app.router.add_route('*', '/active_monitor_contact/', view.ActiveMonitorContactView)
-    app.router.add_route('*', '/active_monitor_contact_group/', view.ActiveMonitorContactGroupView)
-    app.router.add_route('*', '/active_monitor_def/', view.ActiveMonitorDefView)
-    app.router.add_route('*', '/active_monitor_def_arg/', view.ActiveMonitorDefArgView)
-    app.router.add_route('*', '/monitor_group/', view.MonitorGroupView)
-    app.router.add_route('*', '/monitor_group_active_monitor/', view.MonitorGroupActiveMonitorView)
-    app.router.add_route('*', '/monitor_group_contact/', view.MonitorGroupContactView)
-    app.router.add_route('*', '/monitor_group_contact_group/', view.MonitorGroupContactGroupView)
-    app.router.add_route('*', '/contact/', view.ContactView)
-    app.router.add_route('*', '/contact_group/', view.ContactGroupView)
-    app.router.add_route('*', '/contact_group_contact/', view.ContactGroupContactView)
-    app.router.add_route('*', '/metadata/', view.MetadataView)
-    app.router.add_route('*', '/bindata/', view.BindataView)
-    app.router.add_route('*', '/statistics/', view.StatisticsView)
+    app.router.add_route("*", "/active_monitor/", view.ActiveMonitorView)
+    app.router.add_route("*", "/active_monitor_alert/", view.ActiveMonitorAlertView)
+    app.router.add_route("*", "/active_monitor_contact/", view.ActiveMonitorContactView)
+    app.router.add_route(
+        "*", "/active_monitor_contact_group/", view.ActiveMonitorContactGroupView
+    )
+    app.router.add_route("*", "/active_monitor_def/", view.ActiveMonitorDefView)
+    app.router.add_route("*", "/active_monitor_def_arg/", view.ActiveMonitorDefArgView)
+    app.router.add_route("*", "/monitor_group/", view.MonitorGroupView)
+    app.router.add_route(
+        "*", "/monitor_group_active_monitor/", view.MonitorGroupActiveMonitorView
+    )
+    app.router.add_route("*", "/monitor_group_contact/", view.MonitorGroupContactView)
+    app.router.add_route(
+        "*", "/monitor_group_contact_group/", view.MonitorGroupContactGroupView
+    )
+    app.router.add_route("*", "/contact/", view.ContactView)
+    app.router.add_route("*", "/contact_group/", view.ContactGroupView)
+    app.router.add_route("*", "/contact_group_contact/", view.ContactGroupContactView)
+    app.router.add_route("*", "/metadata/", view.MetadataView)
+    app.router.add_route("*", "/bindata/", view.BindataView)
+    app.router.add_route("*", "/statistics/", view.StatisticsView)
 
 
-def initialize(loop: asyncio.AbstractEventLoop, port: int, username: str, password: str, dbcon: DBConnection,
-               active_monitor_manager: ActiveMonitorManager) -> None:
+def initialize(
+    loop: asyncio.AbstractEventLoop,
+    port: int,
+    username: str,
+    password: str,
+    dbcon: DBConnection,
+    active_monitor_manager: ActiveMonitorManager,
+) -> None:
     """Initialize the webapi listener."""
-    stats.set('num_calls', 0, 'WEBAPI')
-    app = web.Application(loop=loop, logger=log.logger,
-                          middlewares=[
-                              middleware.logging_middleware_factory,
-                              middleware.error_handler_middleware_factory,
-                              middleware.basic_auth_middleware_factory,
-                          ])
-    app['username'] = username
-    app['password'] = password
-    app['dbcon'] = dbcon
-    app['active_monitor_manager'] = active_monitor_manager
+    stats.set("num_calls", 0, "WEBAPI")
+    app = web.Application(
+        loop=loop,
+        logger=log.logger,
+        middlewares=[
+            middleware.logging_middleware_factory,
+            middleware.error_handler_middleware_factory,
+            middleware.basic_auth_middleware_factory,
+        ],
+    )
+    app["username"] = username
+    app["password"] = password
+    app["dbcon"] = dbcon
+    app["active_monitor_manager"] = active_monitor_manager
     setup_routes(app)
-    listener = loop.create_server(app.make_handler(), '0.0.0.0', port)
+    listener = loop.create_server(app.make_handler(), "0.0.0.0", port)
     loop.create_task(listener)
-    log.msg('Webapi listening on port %s' % port)
+    log.msg("Webapi listening on port %s" % port)

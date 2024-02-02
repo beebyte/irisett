@@ -6,7 +6,7 @@ irisett starts up.
 
 # The current active version of the database, increase when making changes
 # and create upgrade queries in SQL_UPGRADES below.
-CUR_VERSION = 4
+CUR_VERSION = 8
 
 SQL_VERSION = [
     """insert into version (version) values ('%s')""" % str(CUR_VERSION),
@@ -32,6 +32,7 @@ SQL_TABLES = [
             `deleted` boolean NOT NULL DEFAULT false,
             `checks_enabled` boolean NOT NULL DEFAULT true,
             `alerts_enabled` boolean NOT NULL DEFAULT true,
+            `alias` VARCHAR(50) NULL,
             PRIMARY KEY (`id`)
         )
         """,
@@ -56,6 +57,19 @@ SQL_TABLES = [
             `alert_msg` varchar(200) not null,
             primary key (`id`),
             key `monitor_id_idx` (`monitor_id`)
+        )
+        """,
+    """
+        create table active_monitor_results
+        (
+            `id` int not null auto_increment,
+            `monitor_id` int not null,
+            `timestamp` int not null,
+            `state` varchar(10) NOT NULL,
+            `result_msg` varchar(200) not null,
+            primary key (`id`),
+            key `monitor_id_idx` (`monitor_id`)
+            key `timestamp_idx` (`timestamp`)
         )
         """,
     """
@@ -202,7 +216,7 @@ SQL_MONITOR_DEFS = [
         values (
             "Ping monitor",
             "Monitor an IP using ICMP echo request packets.",
-            True,
+            true,
             "/usr/lib/nagios/plugins/check_ping",
             "-H {{hostname}} -w {{rtt}},{{pl}}% -c {{rtt}},{{pl}}%",
             "Ping monitor for {{hostname}}"
@@ -287,5 +301,27 @@ SQL_UPGRADES = {
     ],
     4: [
         """ALTER TABLE `active_monitor_defs` MODIFY cmdline_args_tmpl varchar(1000)""",
+    ],
+    5: [
+        """
+            create table active_monitor_results
+            (
+                `id` int not null auto_increment,
+                `monitor_id` int not null,
+                `timestamp` int not null,
+                `result_msg` varchar(200) not null,
+                primary key (`id`),
+                key `monitor_id_idx` (`monitor_id`)
+            )
+            """,
+    ],
+    6: [
+        """ALTER TABLE `active_monitor_results` ADD INDEX `timestamp_idx` (`timestamp`)""",
+    ],
+    7: [
+        """ALTER TABLE `active_monitor_results` ADD `state` varchar(10) NOT NULL AFTER `timestamp`""",
+    ],
+    8: [
+        """ALTER TABLE `active_monitors` ADD `alias` varchar(50) NULL AFTER `alerts_enabled`""",
     ],
 }

@@ -3,12 +3,18 @@
     <div class="action-menu">
         <a href="/active_monitor/{{ monitor.id }}/run/">Schedule monitor now</a>
         <a href="/active_monitor/{{ monitor.id }}/test-notification/">Send test notification</a>
+        <a href="/active_monitor/{{ monitor.id }}/results/">Display monitor results</a>
+        <a href="/active_monitor/{{ monitor.id }}/alerts/">Display alerts</a>
     </div>
     <h1 class="table-heading">Active monitor</h1>
     <table class="table kvp-table">
         <tr>
             <td>Name</td>
-            <td>{{ monitor.get_description() }}</td>
+            <td>{{ monitor.get_description(skip_alias=True) }}</td>
+        </tr>
+        <tr>
+            <td>Alias</td>
+            <td>{{ monitor.alias }}</td>
         </tr>
         <tr>
             <td>State</td>

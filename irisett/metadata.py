@@ -10,7 +10,9 @@ from irisett.sql import DBConnection, Cursor
 from irisett import object_models
 
 
-async def get_metadata(dbcon: DBConnection, object_type: str, object_id: int) -> Dict[str, str]:
+async def get_metadata(
+    dbcon: DBConnection, object_type: str, object_id: int
+) -> Dict[str, str]:
     """Return a dict of metadata for an object."""
     q = """select `key`, value from object_metadata where object_type=%s and object_id=%s"""
     q_args = (object_type, object_id)
@@ -21,7 +23,9 @@ async def get_metadata(dbcon: DBConnection, object_type: str, object_id: int) ->
     return metadict
 
 
-async def add_metadata(dbcon: DBConnection, object_type: str, object_id: int, metadict: Dict[str, str]):
+async def add_metadata(
+    dbcon: DBConnection, object_type: str, object_id: int, metadict: Dict[str, str]
+):
     """Add metadata to an object.
 
     Metadict is a dictionary of key value pairs to add.
@@ -36,7 +40,9 @@ async def add_metadata(dbcon: DBConnection, object_type: str, object_id: int, me
     await dbcon.transact(_run)
 
 
-async def update_metadata(dbcon: DBConnection, object_type: str, object_id: int, metadict: Dict[str, str]):
+async def update_metadata(
+    dbcon: DBConnection, object_type: str, object_id: int, metadict: Dict[str, str]
+):
     """Update metadata values for an object.
 
     Metadict is a dictionary of key value pairs to add.
@@ -55,8 +61,12 @@ async def update_metadata(dbcon: DBConnection, object_type: str, object_id: int,
     await dbcon.transact(_run)
 
 
-async def delete_metadata(dbcon: DBConnection, object_type: str, object_id: int,
-                          keys: Optional[Iterable[str]] = None):
+async def delete_metadata(
+    dbcon: DBConnection,
+    object_type: str,
+    object_id: int,
+    keys: Optional[Iterable[str]] = None,
+):
     """Delete metadata for an object.
 
     If keys is given, only delete the specified keys, otherwise delete all
@@ -79,7 +89,8 @@ async def delete_metadata(dbcon: DBConnection, object_type: str, object_id: int,
 
 
 async def get_metadata_for_object(
-        dbcon: DBConnection, object_type: str, object_id: int) -> Iterable[object_models.ObjectMetadata]:
+    dbcon: DBConnection, object_type: str, object_id: int
+) -> Iterable[object_models.ObjectMetadata]:
     """Get ObjectMetadata for a single object (type, id)
 
     Ie. contact, [ID]
@@ -88,33 +99,49 @@ async def get_metadata_for_object(
         from object_metadata as metadata
         where metadata.object_type=%s and metadata.object_id=%s"""
     q_args = (object_type, object_id)
-    return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, q_args)]
+    return [
+        object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, q_args)
+    ]
 
 
 async def get_metadata_for_object_type(
-        dbcon: DBConnection, object_type: str) -> Iterable[object_models.ObjectMetadata]:
+    dbcon: DBConnection, object_type: str
+) -> Iterable[object_models.ObjectMetadata]:
     """Get ObjectMetadata for all objects of object_type
 
     Ie. contact
     """
-    q = '''select metadata.object_type, metadata.object_id, metadata.key, metadata.value
+    q = """select metadata.object_type, metadata.object_id, metadata.key, metadata.value
         from object_metadata as metadata
-        where metadata.object_type=%s'''
-    return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, (object_type,))]
+        where metadata.object_type=%s"""
+    return [
+        object_models.ObjectMetadata(*row)
+        for row in await dbcon.fetch_all(q, (object_type,))
+    ]
 
 
 async def get_metadata_for_object_metadata(
-        dbcon: DBConnection, metadata_key: str, metadata_value: str,
-        object_type: str, object_table: str) -> Iterable[object_models.ObjectMetadata]:
+    dbcon: DBConnection,
+    metadata_key: str,
+    metadata_value: str,
+    object_type: str,
+    object_table: str,
+) -> Iterable[object_models.ObjectMetadata]:
     """Get ObjectMetadata for all object matching a (key, value, object_type) set.
 
     Ie. Get all metadata for contacts (object_type) matching the
     (key: value): device: 123.
     """
-    q = '''select m2.object_type, m2.object_id, m2.key, m2.value
+    q = """select m2.object_type, m2.object_id, m2.key, m2.value
                 from object_metadata as m1
                 left join %s on %s.id=m1.object_id
                 left join object_metadata as m2 on m2.object_id=%s.id
-                where m1.key=%%s and m1.value=%%s and m2.object_type=%%s''' % (object_table, object_table, object_table)
+                where m1.key=%%s and m1.value=%%s and m2.object_type=%%s""" % (
+        object_table,
+        object_table,
+        object_table,
+    )
     q_args = (metadata_key, metadata_value, object_type)
-    return [object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, q_args)]
+    return [
+        object_models.ObjectMetadata(*row) for row in await dbcon.fetch_all(q, q_args)
+    ]

@@ -9,17 +9,17 @@ def parse_bool(string: Union[str, bool]) -> bool:
         return cast(bool, string)
     string = cast(str, string)
     ret = False
-    if string.lower() == 'true':
+    if string.lower() == "true":
         ret = True
     return ret
 
 
 intervals = (
-    ('weeks', 604800),  # 60 * 60 * 24 * 7
-    ('days', 86400),  # 60 * 60 * 24
-    ('hours', 3600),  # 60 * 60
-    ('minutes', 60),
-    ('seconds', 1),
+    ("weeks", 604800),  # 60 * 60 * 24 * 7
+    ("days", 86400),  # 60 * 60 * 24
+    ("hours", 3600),  # 60 * 60
+    ("minutes", 60),
+    ("seconds", 1),
 )
 
 
@@ -34,7 +34,7 @@ def get_display_time(seconds: float, granularity: int = 2) -> str:
         if value:
             seconds -= value * count
             if value == 1:
-                name = name.rstrip('s')
+                name = name.rstrip("s")
             result.append("{} {}".format(value, name))
-    ret = ', '.join(result[:granularity])
+    ret = ", ".join(result[:granularity])
     return ret

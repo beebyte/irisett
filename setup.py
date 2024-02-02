@@ -25,6 +25,7 @@ packages = [
     'irisett.notify',
     'irisett.webapi',
     'irisett.webmgmt',
+    'irisett.sql',
 ]
 
 package_data = {
@@ -40,6 +41,7 @@ install_requires = [
     'Jinja2',
     'PyMySQL',
     'requests',
+    'aiosqlite',
 ]
 
 setup(
