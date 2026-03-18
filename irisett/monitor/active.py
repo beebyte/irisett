@@ -344,7 +344,7 @@ class ActiveMonitorDef(log.LoggingMixin):
         """
         args = {a.name: a.default_value for a in self.arg_spec}
         args.update(monitor_args)
-        quoted_args = {k: shlex.quote(v) if isinstance(v, str) else v for k, v in args.items()}
+        quoted_args = {k: shlex.quote(v) if isinstance(v, str) and v else v for k, v in args.items()}
         expanded = self.jinja_cmdline_args.render(**quoted_args)
         ret = shlex.split(expanded)  # Supports "" splitting etc.
         return ret
