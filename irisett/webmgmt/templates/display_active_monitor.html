@@ -17,6 +17,10 @@
             <td>{{ monitor.alias }}</td>
         </tr>
         <tr>
+            <td>Created</td>
+            <td>{% if monitor.created %}{{ monitor.created|timestamp }}{% else %}Unknown{% endif %}</td>
+        </tr>
+        <tr>
             <td>State</td>
             <td>{{ monitor.state }}</td>
         </tr>

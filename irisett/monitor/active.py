@@ -95,6 +95,8 @@ async def load_monitors(manager: "ActiveMonitorManager") -> Dict[int, "ActiveMon
             monitor.checks_enabled,
             monitor.alerts_enabled,
             manager,
+            alias=monitor.alias or "",
+            created=monitor.created or 0,
         )
     return monitors
 
@@ -410,7 +412,7 @@ class ActiveMonitorDef(log.LoggingMixin):
             if param in update_params:
                 q = """update active_monitor_defs set %s=%%s where id=%%s""" % param
                 q_args = (update_params[param], self.id)
-                queries.append(q, q_args)
+                queries.append((q, q_args))
         await self.manager.dbcon.multi_operation(queries)
 
     def iter_monitors(self) -> Iterator["ActiveMonitor"]:
@@ -469,12 +471,16 @@ class ActiveMonitor(log.LoggingMixin):
         checks_enabled: bool,
         alerts_enabled: bool,
         manager: ActiveMonitorManager,
+        alias: str = "",
+        created: int = 0,
     ) -> None:
         self.id = id
         self.args = args
         self.monitor_def = monitor_def
         self.state = state
         self.manager = manager
+        self.alias = alias
+        self.created = created
         self.monitor_interval = manager.default_monitor_interval
         self.down_threshold = manager.default_down_threshold
         self.last_check_state = None  # type: Optional[str]
@@ -502,7 +508,7 @@ class ActiveMonitor(log.LoggingMixin):
             self.last_check_state,
         )
 
-    def get_description(self) -> str:
+    def get_description(self, skip_alias: bool = False) -> str:
         """Get a description for this monitor.
 
         The description is created from a template in the monitor defintion.
@@ -804,6 +810,11 @@ class ActiveMonitor(log.LoggingMixin):
         q_args = (alerts_enabled, self.id)
         await self.manager.dbcon.operation(q, q_args)
 
+    async def set_alias(self, alias: str) -> None:
+        self.alias = alias
+        q = """update active_monitors set alias=%s where id=%s"""
+        await self.manager.dbcon.operation(q, (alias, self.id))
+
     def schedule_immediately(self) -> None:
         """Schedule a check for this monitor ASAP."""
         if not self.monitoring and not self.deleted:
@@ -845,17 +856,21 @@ async def remove_deleted_monitors(dbcon: DBConnection) -> None:
     log.msg("Purging all deleted active monitors")
     q = """select id from active_monitors where deleted=%s"""
     rows = await dbcon.fetch_all(q, (True,))
-    for monitor_id in rows:
+    for (monitor_id,) in rows:
         await active_sql.delete_active_monitor(dbcon, monitor_id)
 
 
 async def create_active_monitor(
-    manager: ActiveMonitorManager, args: Dict[str, str], monitor_def: ActiveMonitorDef
+    manager: ActiveMonitorManager,
+    args: Dict[str, str],
+    monitor_def: ActiveMonitorDef,
+    alias: str = "",
 ) -> ActiveMonitor:
     monitor_def.validate_monitor_args(args)
     monitor_id = await active_sql.create_active_monitor(
         manager.dbcon, monitor_def.id, args
     )
+    created = int(time.time())
     monitor = ActiveMonitor(
         monitor_id,
         args,
@@ -867,7 +882,11 @@ async def create_active_monitor(
         checks_enabled=True,
         alerts_enabled=True,
         manager=manager,
+        alias=alias,
+        created=created,
     )
+    if alias:
+        await monitor.set_alias(alias)
     log.msg("Created active monitor %s" % monitor)
     manager.add_monitor(monitor)
     return monitor

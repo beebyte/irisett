@@ -307,7 +307,7 @@ async def set_active_monitor_contact_groups(
     for contact_group_id in contact_group_ids:
         q = """insert into active_monitor_contact_groups (active_monitor_id, contact_group_id) values (%s, %s)"""
         q_args = (monitor_id, contact_group_id)
-        queries.append(q, q_args)
+        queries.append((q, q_args))
     await dbcon.multi_operation(queries)
 
 
@@ -393,7 +393,7 @@ async def set_contact_group_contacts(
     for contact_id in contact_ids:
         q = """insert into contact_group_contacts (contact_group_id, contact_id) values (%s, %s)"""
         q_args = (contact_group_id, contact_id)
-        queries.append(q, q_args)
+        queries.append((q, q_args))
     await dbcon.multi_operation(queries)
 
 

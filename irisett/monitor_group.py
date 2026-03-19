@@ -55,7 +55,7 @@ async def update_monitor_group(
                 raise errors.InvalidArguments("parent monitor group does not exist")
         q = """update monitor_groups set %s=%%s where id=%%s""" % key
         q_args = (value, monitor_group_id)
-        queries.append(q, q_args)
+        queries.append((q, q_args))
     await dbcon.multi_operation(queries)
 
 

@@ -1,5 +1,6 @@
 """SQL functions for active monitors."""
 
+import time
 from typing import Iterable, Optional, Dict, Tuple
 
 from irisett.sql import DBConnection
@@ -59,7 +60,7 @@ async def get_all_active_monitors(
     dbcon: DBConnection,
 ) -> Iterable[object_models.ActiveMonitor]:
     """Load monitors from the database."""
-    q = """select id, def_id, state, state_ts, msg, alert_id, deleted, checks_enabled, alerts_enabled, alias
+    q = """select id, def_id, state, state_ts, msg, alert_id, deleted, checks_enabled, alerts_enabled, alias, created
             from active_monitors"""
     return [object_models.ActiveMonitor(*row) for row in await dbcon.fetch_all(q)]
 
@@ -76,7 +77,7 @@ async def get_active_monitors_for_metadata(
     dbcon: DBConnection, meta_key: str, meta_value: str
 ):
     q = """select mon.id, mon.def_id, mon.state, mon.state_ts, mon.msg, mon.alert_id, mon.deleted,
-        mon.checks_enabled, mon.alerts_enabled
+        mon.checks_enabled, mon.alerts_enabled, mon.alias, mon.created
         from active_monitors as mon, object_metadata as meta
         where meta.key=%s and meta.value=%s and meta.object_type="active_monitor" and meta.object_id=mon.id"""
     q_args = (meta_key, meta_value)
@@ -89,8 +90,8 @@ async def create_active_monitor(
     dbcon: DBConnection, monitor_def_id: int, monitor_args: Dict[str, str]
 ) -> int:
     async def _run(cur: sql.Cursor) -> int:
-        q = """insert into active_monitors (def_id, state, state_ts, msg) values (%s, %s, %s, %s)"""
-        q_args = (monitor_def_id, "UNKNOWN", 0, "")  # type: Tuple
+        q = """insert into active_monitors (def_id, state, state_ts, msg, created) values (%s, %s, %s, %s, %s)"""
+        q_args = (monitor_def_id, "UNKNOWN", 0, "", int(time.time()))  # type: Tuple
         await cur.execute(dbcon.prep_query(q), q_args)
         _monitor_id = cur.lastrowid
         q = """insert into active_monitor_args (monitor_id, name, value) values (%s, %s, %s)"""
@@ -193,7 +194,7 @@ async def purge_active_monitor_results(
     dbcon: DBConnection, timestamp: int
 ) -> int:
     q = """delete from active_monitor_results where timestamp < %s"""
-    await dbcon.operation(q, timestamp)
+    await dbcon.operation(q, (timestamp,))
 
 
 async def get_active_monitor_results_for_monitor(
