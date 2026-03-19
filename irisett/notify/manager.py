@@ -20,11 +20,15 @@ class NotificationManager:
                 "Missing config section, no alert notification will be sent",
                 "NOTIFICATIONS",
             )
+            self.alerts_enabled = True
             self.http_settings = None
             self.email_settings = None
             self.sms_settings = None
             self.slack_settings = None
         else:
+            self.alerts_enabled = config.getboolean("alerts-enabled", fallback=True)
+            if not self.alerts_enabled:
+                log.msg("Alert sending disabled by config", "NOTIFICATIONS")
             self.http_settings = http.parse_settings(config)
             self.email_settings = email.parse_settings(config)
             self.sms_settings = sms.parse_settings(config)
@@ -33,6 +37,9 @@ class NotificationManager:
     async def send_notification(
         self, recipient_dict: Dict[str, Any], tmpl_args: Dict[str, Any]
     ) -> bool:
+        if not self.alerts_enabled:
+            log.msg("Skipping alert notification, alerts disabled by config", "NOTIFICATIONS")
+            return False
         email_recipients = list(recipient_dict["email"])
         sms_recipients = list(recipient_dict["phone"])
         if email_recipients and self.email_settings:

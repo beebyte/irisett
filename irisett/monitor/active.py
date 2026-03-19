@@ -580,6 +580,7 @@ class ActiveMonitor(log.LoggingMixin):
             msg = cast(bytes, msg)
             msg = msg.decode("utf-8", errors="ignore")
         msg = cast(str, msg)
+        msg = "".join(c for c in msg if c.isprintable() or c in "\t\n\r")
         self.msg = msg
         self.update_consecutive_checks(check_state)
         await self.handle_check_result(check_state, msg)
