@@ -49,7 +49,3 @@ The codebase is organized around these top-level modules inside `irisett/`:
 - **State machine**: each monitor tracks consecutive failures; a monitor goes DOWN only after `down_threshold` consecutive failures. Alerts fire on UP→DOWN and DOWN→UP transitions.
 - **Result retention**: if `result-retention` is set (hours), check results are stored in `active_monitor_results` and pruned on a schedule.
 - **Metadata**: arbitrary key-value pairs on any object type/id, used for external system integration (e.g. `meta_organisation` in notification templates).
-
-### Testing
-
-Tests use a real MySQL database (not mocks). The test DB credentials are hardcoded in `tests/sqlsetup.py`. `get_dbcon(reinit=True)` drops and recreates all tables; `reinit=False` reuses existing schema.
