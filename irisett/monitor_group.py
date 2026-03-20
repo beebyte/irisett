@@ -197,7 +197,7 @@ async def get_active_monitors_for_monitor_group(
     dbcon: DBConnection, id: int
 ) -> Iterable[object_models.ActiveMonitor]:
     q = """select mon.id, mon.def_id, mon.state, mon.state_ts, mon.msg, mon.alert_id, mon.deleted,
-            mon.checks_enabled, mon.alerts_enabled
+            mon.checks_enabled, mon.alerts_enabled, mon.alias, mon.created
             from active_monitors as mon, monitor_group_active_monitors
             where mon.id=monitor_group_active_monitors.active_monitor_id
             and monitor_group_active_monitors.monitor_group_id=%s"""

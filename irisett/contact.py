@@ -84,7 +84,7 @@ async def update_contact_group(
     queries = []
     for key, value in data.items():
         if key not in ["name", "active"]:
-            raise errors.IrisettError("invalid contact key %s" % key)
+            raise errors.IrisettError("invalid contact_group key %s" % key)
         q = """update contact_groups set %s=%%s where id=%%s""" % key
         q_args = (value, contact_group_id)
         queries.append((q, q_args))

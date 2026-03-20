@@ -484,7 +484,6 @@ class ActiveMonitorDefView(web.View):
 
     async def post(self) -> web.Response:
         request_data = await self.request.json()
-        object_models.ActiveMonitorDef()
         monitor_def = await create_active_monitor_def(
             self.request.app["active_monitor_manager"],
             object_models.ActiveMonitorDef(
@@ -533,7 +532,7 @@ class ActiveMonitorDefArgView(web.View):
     async def put(self) -> web.Response:
         request_data = await self.request.json()
         monitor_def = self._get_request_monitor_def(self.request)
-        monitor_def.set_arg(
+        await monitor_def.set_arg(
             object_models.ActiveMonitorDefArg(
                 id=0,
                 active_monitor_def_id=monitor_def.id,
@@ -644,7 +643,7 @@ class ContactGroupView(web.View):
         else:
             contact_group_list = await contact.get_all_contact_groups(dbcon)
             metadata_list = await metadata.get_metadata_for_object_type(
-                dbcon, "monitor_group"
+                dbcon, "contact_group"
             )
         return web.json_response(
             apply_metadata_to_model_list(contact_group_list, metadata_list)

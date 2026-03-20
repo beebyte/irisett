@@ -66,8 +66,8 @@ def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
     if (
         not ret["sender"]
         or not ret["tmpl-subject"]
-        or not ["tmpl-body"]
-        or not ["server"]
+        or not ret["tmpl-body"]
+        or not ret["server"]
     ):
         log.msg(
             "Email settings missing, no email notifications will be sent",
