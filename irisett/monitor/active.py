@@ -761,6 +761,13 @@ class ActiveMonitor(log.LoggingMixin):
         self.deleted = True
         if self.id in self.manager.monitors:
             del self.manager.monitors[self.id]
+        if self.alert_id:
+            # Close any open alert immediately so it stops showing as active
+            # even if _purge is deferred until the in-flight check completes.
+            q = """update active_monitor_alerts set end_ts=%s where id=%s"""
+            q_args = (int(time.time()), self.alert_id)
+            await self.manager.dbcon.operation(q, q_args)
+            self.alert_id = None
         if self.monitoring:
             q = """update active_monitors set deleted=%s where id=%s"""
             q_args = (True, self.id)
