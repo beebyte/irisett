@@ -27,7 +27,11 @@ async def send_email(
     """
     if type(mail_to) == str:
         mail_to = [mail_to]
-    smtp = aiosmtplib.SMTP(hostname=server, port=25)
+    # start_tls=False: don't opportunistically upgrade to STARTTLS. This is a
+    # plain port 25 relay send with no TLS config anywhere, and aiosmtplib's
+    # default opportunistic STARTTLS fails cert validation against internal
+    # relays that present certs not valid for the configured hostname.
+    smtp = aiosmtplib.SMTP(hostname=server, port=25, start_tls=False)
     try:
         await smtp.connect()
         for rcpt in mail_to:
@@ -37,7 +41,7 @@ async def send_email(
             msg["To"] = rcpt
             await smtp.send_message(msg)
         await smtp.quit()
-    except aiosmtplib.errors.SMTPException as e:
+    except (aiosmtplib.errors.SMTPException, OSError) as e:
         log.msg("Error sending smtp notification: %s" % (str(e)), "NOTIFICATIONS")
 
 
