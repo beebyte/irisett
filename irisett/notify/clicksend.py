@@ -56,7 +56,7 @@ def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
         "sender": config.get("sms-clicksend-sender"),
         "tmpl": config.get("sms-tmpl"),
     }  # type: Any
-    if not ret["username"] or not ret["api-key"] or not ["sender"] or not ["tmpl"]:
+    if not ret["username"] or not ret["api-key"] or not ret["sender"] or not ret["tmpl"]:
         log.msg(
             "SMS settings missing, no sms notifications will be sent", "NOTIFICATIONS"
         )
