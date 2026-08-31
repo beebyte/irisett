@@ -44,7 +44,7 @@ class NotificationManager:
         sms_recipients = list(recipient_dict["phone"])
         if email_recipients and self.email_settings:
             await email.send_alert_notification(
-                self.loop, self.email_settings, email_recipients, tmpl_args
+                self.email_settings, email_recipients, tmpl_args
             )
         if sms_recipients and self.sms_settings:
             await sms.send_alert_notification(
@@ -62,7 +62,6 @@ class NotificationManager:
         if not self.email_settings:
             return
         await email.send_email(
-            self.loop,
             self.email_settings["sender"],
             recipients,
             subject,

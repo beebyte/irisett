@@ -8,14 +8,12 @@ from email import charset
 charset.add_charset("utf-8", charset.SHORTEST, charset.QP)  # type: ignore
 # noinspection PyPep8
 from email.mime.text import MIMEText
-import asyncio
 
 # noinspection PyPep8
 from irisett import log
 
 
 async def send_email(
-    loop: asyncio.AbstractEventLoop,
     mail_from: str,
     mail_to: Union[Iterable, str],
     subject: str,
@@ -29,7 +27,7 @@ async def send_email(
     """
     if type(mail_to) == str:
         mail_to = [mail_to]
-    smtp = aiosmtplib.SMTP(hostname=server, port=25, loop=loop)
+    smtp = aiosmtplib.SMTP(hostname=server, port=25)
     try:
         await smtp.connect()
         for rcpt in mail_to:
@@ -44,7 +42,6 @@ async def send_email(
 
 
 async def send_alert_notification(
-    loop: asyncio.AbstractEventLoop,
     settings: Dict[str, Any],
     recipients: Iterable[str],
     tmpl_args: Dict[str, Any],
@@ -52,7 +49,7 @@ async def send_alert_notification(
     subject = settings["tmpl-subject"].render(**tmpl_args)
     body = settings["tmpl-body"].render(**tmpl_args)
     await send_email(
-        loop, settings["sender"], recipients, subject, body, settings["server"]
+        settings["sender"], recipients, subject, body, settings["server"]
     )
 
 
