@@ -67,6 +67,8 @@ class NotificationManager:
             subject,
             body,
             self.email_settings["server"],
+            self.email_settings["starttls"],
+            self.email_settings["validate-certs"],
         )
 
     async def send_sms(self, recipients: Iterable[str], msg: str):

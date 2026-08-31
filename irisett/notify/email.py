@@ -19,6 +19,8 @@ async def send_email(
     subject: str,
     body: str,
     server: str = "localhost",
+    starttls: bool = False,
+    validate_certs: bool = True,
 ) -> None:
     """Send an email to one or more recipients.
 
@@ -27,11 +29,9 @@ async def send_email(
     """
     if type(mail_to) == str:
         mail_to = [mail_to]
-    # start_tls=False: don't opportunistically upgrade to STARTTLS. This is a
-    # plain port 25 relay send with no TLS config anywhere, and aiosmtplib's
-    # default opportunistic STARTTLS fails cert validation against internal
-    # relays that present certs not valid for the configured hostname.
-    smtp = aiosmtplib.SMTP(hostname=server, port=25, start_tls=False)
+    smtp = aiosmtplib.SMTP(
+        hostname=server, port=25, start_tls=starttls, validate_certs=validate_certs
+    )
     try:
         await smtp.connect()
         for rcpt in mail_to:
@@ -53,7 +53,13 @@ async def send_alert_notification(
     subject = settings["tmpl-subject"].render(**tmpl_args)
     body = settings["tmpl-body"].render(**tmpl_args)
     await send_email(
-        settings["sender"], recipients, subject, body, settings["server"]
+        settings["sender"],
+        recipients,
+        subject,
+        body,
+        settings["server"],
+        settings["starttls"],
+        settings["validate-certs"],
     )
 
 
@@ -63,6 +69,8 @@ def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
         "tmpl-subject": config.get("email-tmpl-subject"),
         "tmpl-body": config.get("email-tmpl-body"),
         "server": config.get("email-server", fallback="localhost"),
+        "starttls": config.getboolean("email-starttls", fallback=False),
+        "validate-certs": config.getboolean("email-validate-certs", fallback=True),
     }  # type: Any
     if (
         not ret["sender"]
