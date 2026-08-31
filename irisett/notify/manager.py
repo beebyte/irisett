@@ -67,6 +67,7 @@ class NotificationManager:
             subject,
             body,
             self.email_settings["server"],
+            self.email_settings["port"],
             self.email_settings["starttls"],
             self.email_settings["validate-certs"],
         )

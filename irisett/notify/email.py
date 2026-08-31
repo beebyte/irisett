@@ -19,6 +19,7 @@ async def send_email(
     subject: str,
     body: str,
     server: str = "localhost",
+    port: int = 25,
     starttls: bool = False,
     validate_certs: bool = True,
 ) -> None:
@@ -30,7 +31,7 @@ async def send_email(
     if type(mail_to) == str:
         mail_to = [mail_to]
     smtp = aiosmtplib.SMTP(
-        hostname=server, port=25, start_tls=starttls, validate_certs=validate_certs
+        hostname=server, port=port, start_tls=starttls, validate_certs=validate_certs
     )
     try:
         await smtp.connect()
@@ -58,6 +59,7 @@ async def send_alert_notification(
         subject,
         body,
         settings["server"],
+        settings["port"],
         settings["starttls"],
         settings["validate-certs"],
     )
@@ -69,6 +71,7 @@ def parse_settings(config: Any) -> Optional[Dict[str, Any]]:
         "tmpl-subject": config.get("email-tmpl-subject"),
         "tmpl-body": config.get("email-tmpl-body"),
         "server": config.get("email-server", fallback="localhost"),
+        "port": config.getint("email-port", fallback=25),
         "starttls": config.getboolean("email-starttls", fallback=False),
         "validate-certs": config.getboolean("email-validate-certs", fallback=True),
     }  # type: Any
