@@ -6,7 +6,10 @@ it.
 
 from typing import Optional, Iterable, Any, List, Callable
 import asyncio
+import functools
 import aiomysql
+from pymysql.constants import CR
+from pymysql.err import InterfaceError, OperationalError
 
 from irisett import (
     log,
@@ -15,6 +18,58 @@ from irisett import (
 
 from irisett.sql import mysql_data as sql_data
 import irisett.sql.base
+
+
+# Proactively recycle pooled connections older than this, so we replace a
+# connection before MySQL's wait_timeout (commonly much longer, but not
+# guaranteed) or a network device's idle-connection cutoff kills it under us.
+POOL_RECYCLE_SECONDS = 300
+
+# Error codes that mean the underlying connection is dead (timed out, MySQL
+# restarted, network blip, etc) rather than something wrong with the query
+# itself. It's safe to transparently retry these on a fresh connection.
+_RETRYABLE_MYSQL_ERROR_CODES = {
+    CR.CR_SERVER_GONE_ERROR,  # 2006, "MySQL server has gone away"
+    CR.CR_SERVER_LOST,  # 2013, "Lost connection to MySQL server during query"
+    CR.CR_CONN_HOST_ERROR,  # 2003, can't connect to the server
+}
+
+
+def _is_connection_error(exc: Exception) -> bool:
+    if isinstance(exc, InterfaceError):
+        # Raised eg. when trying to use a connection that's already known to
+        # be closed (aiomysql's _ensure_alive()).
+        return True
+    if isinstance(exc, OperationalError) and exc.args:
+        return exc.args[0] in _RETRYABLE_MYSQL_ERROR_CODES
+    return False
+
+
+def _retry_on_connection_loss(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Retry a DBConnection method once if it fails due to a dead connection.
+
+    A connection sitting idle in the pool can die between requests (MySQL's
+    wait_timeout, a MySQL restart, a network blip). aiomysql only discovers
+    this when the connection is actually used, so the first query on it
+    fails even though the pool considered it healthy. Retrying once, which
+    acquires a new connection, papers over exactly that case without masking
+    real query errors.
+    """
+
+    @functools.wraps(func)
+    async def wrapper(self: "DBConnection", *args: Any, **kwargs: Any) -> Any:
+        try:
+            return await func(self, *args, **kwargs)
+        except (InterfaceError, OperationalError) as e:
+            if not _is_connection_error(e):
+                raise
+            log.msg(
+                "Lost MySQL connection (%s), retrying %s" % (e, func.__name__),
+                "SQL",
+            )
+            return await func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class DBConnection(irisett.sql.base.DBConnection):
@@ -46,7 +101,11 @@ class DBConnection(irisett.sql.base.DBConnection):
         if necessary.
         """
         self.pool = await aiomysql.create_pool(
-            host=self.host, user=self.user, password=self.passwd, loop=self.loop
+            host=self.host,
+            user=self.user,
+            password=self.passwd,
+            loop=self.loop,
+            pool_recycle=POOL_RECYCLE_SECONDS,
         )
         if reset_db:
             await self._drop_db()
@@ -66,6 +125,7 @@ class DBConnection(irisett.sql.base.DBConnection):
             password=self.passwd,
             db=self.dbname,
             loop=self.loop,
+            pool_recycle=POOL_RECYCLE_SECONDS,
         )
         if not db_initialized:
             await self._init_db(only_init_tables)
@@ -146,6 +206,7 @@ class DBConnection(irisett.sql.base.DBConnection):
         q_args = (version,)
         await self.operation(q, q_args)
 
+    @_retry_on_connection_loss
     async def fetch_all(self, query: str, args: Optional[Iterable] = None) -> List:
         """Run a query and fetch all returned rows."""
         stats.inc("queries", "SQL")
@@ -155,6 +216,7 @@ class DBConnection(irisett.sql.base.DBConnection):
                 ret = await cur.fetchall()
         return ret
 
+    @_retry_on_connection_loss
     async def fetch_row(self, query: str, args: Optional[Iterable] = None) -> List:
         """Run a query and fetch a single returned row."""
         stats.inc("queries", "SQL")
@@ -181,6 +243,7 @@ class DBConnection(irisett.sql.base.DBConnection):
         res = await self.fetch_all(query, args)
         return len(res)
 
+    @_retry_on_connection_loss
     async def operation(self, query: str, args: Optional[Iterable] = None) -> Any:
         """Run a sql operation (query).
 
@@ -195,6 +258,7 @@ class DBConnection(irisett.sql.base.DBConnection):
                 await conn.commit()
         return ret
 
+    @_retry_on_connection_loss
     async def multi_operation(self, queries) -> Any:
         """Run multiple sql operations as a transaction."""
         async with self.pool.acquire() as conn:
@@ -210,6 +274,7 @@ class DBConnection(irisett.sql.base.DBConnection):
                     await cur.execute(query, args)
                 await conn.commit()
 
+    @_retry_on_connection_loss
     async def transact(
         self, func: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> Any:

@@ -382,11 +382,24 @@ class ActiveMonitorDef(log.LoggingMixin):
         for _ in self.iter_monitors():
             raise errors.IrisettError("can't remove active monitor def that is in use")
         del self.manager.monitor_defs[self.id]
+        try:
+            await active_sql.delete_active_monitor_def(self.manager.dbcon, self.id)
+        except Exception:
+            self.manager.monitor_defs[self.id] = self
+            raise
         self.tmpl_cache.flush_all()
-        await active_sql.delete_active_monitor_def(self.manager.dbcon, self.id)
 
     async def update(self, update_params: Dict[str, Any]) -> None:
         self.log_msg("updating monitor def")
+        old_values = {
+            "name": self.name,
+            "active": self.active,
+            "cmdline_filename": self.cmdline_filename,
+            "cmdline_args_tmpl": self.cmdline_args_tmpl,
+            "jinja_cmdline_args": self.jinja_cmdline_args,
+            "description_tmpl": self.description_tmpl,
+            "jinja_description_tmpl": self.jinja_description_tmpl,
+        }
         if "name" in update_params:
             self.name = update_params["name"]
         if "active" in update_params:
@@ -413,7 +426,13 @@ class ActiveMonitorDef(log.LoggingMixin):
                 q = """update active_monitor_defs set %s=%%s where id=%%s""" % param
                 q_args = (update_params[param], self.id)
                 queries.append((q, q_args))
-        await self.manager.dbcon.multi_operation(queries)
+        try:
+            await self.manager.dbcon.multi_operation(queries)
+        except Exception:
+            for key, value in old_values.items():
+                setattr(self, key, value)
+            self.tmpl_cache.flush_all()
+            raise
 
     def iter_monitors(self) -> Iterator["ActiveMonitor"]:
         """List all monitors that use this monitor def."""
@@ -424,12 +443,19 @@ class ActiveMonitorDef(log.LoggingMixin):
     async def set_arg(self, new_arg: object_models.ActiveMonitorDefArg) -> None:
         existing_arg = self.get_arg_with_name(new_arg.name)
         if existing_arg:
+            old_required = existing_arg.required
+            old_default_value = existing_arg.default_value
             existing_arg.name = new_arg.name
             existing_arg.required = new_arg.required
             existing_arg.default_value = new_arg.default_value
-            await active_sql.update_active_monitor_def_arg(
-                self.manager.dbcon, existing_arg
-            )
+            try:
+                await active_sql.update_active_monitor_def_arg(
+                    self.manager.dbcon, existing_arg
+                )
+            except Exception:
+                existing_arg.required = old_required
+                existing_arg.default_value = old_default_value
+                raise
         else:
             new_arg.id = await active_sql.create_active_monitor_def_arg(
                 self.manager.dbcon, new_arg
@@ -441,8 +467,12 @@ class ActiveMonitorDef(log.LoggingMixin):
         arg = self.get_arg_with_name(name)
         if arg:
             self.arg_spec.remove(arg)
+            try:
+                await active_sql.delete_active_monitor_def_arg(self.manager.dbcon, arg.id)
+            except Exception:
+                self.arg_spec.append(arg)
+                raise
             self.tmpl_cache.flush_all()
-            await active_sql.delete_active_monitor_def_arg(self.manager.dbcon, arg.id)
 
     async def get_notify_data(self) -> Dict[str, str]:
         q = """select name, description from active_monitor_defs where id=%s"""
@@ -655,19 +685,33 @@ class ActiveMonitor(log.LoggingMixin):
         event.running("ACTIVE_MONITOR_STATE_CHANGE", monitor=self, new_state=new_state)
         prev_state = self.state
         prev_state_ts = self.state_ts
+        prev_msg = self.msg
+        prev_alert_id = self.alert_id
         self.state = new_state
         self.state_ts = int(time.time())
         self.msg = msg
         self.log_msg("changed state to %s - %s" % (new_state, msg))
+        try:
+            if new_state == "DOWN":
+                await self.set_down()
+            elif new_state == "UP":
+                await self.set_up()
+            else:
+                await self.set_unknown()
+        except Exception:
+            # set_up/down/unknown (and the txn_create_alert/txn_close_alert
+            # they call) mutate self.alert_id as a side effect before the
+            # database write is confirmed. If that write fails, undo all of
+            # it so the in-memory state doesn't drift from the database.
+            self.state = prev_state
+            self.state_ts = prev_state_ts
+            self.msg = prev_msg
+            self.alert_id = prev_alert_id
+            raise
         if new_state == "DOWN":
-            await self.set_down()
             await self.notify_state_change(prev_state, prev_state_ts)
-        elif new_state == "UP":
-            await self.set_up()
-            if prev_state == "DOWN":
-                await self.notify_state_change(prev_state, prev_state_ts)
-        else:
-            await self.set_unknown()
+        elif new_state == "UP" and prev_state == "DOWN":
+            await self.notify_state_change(prev_state, prev_state_ts)
 
     async def notify_state_change(self, prev_state: str, prev_state_ts: float) -> None:
         if not self.alerts_enabled:
@@ -759,21 +803,31 @@ class ActiveMonitor(log.LoggingMixin):
         self.log_msg("deleting monitor")
         event.running("DELETE_ACTIVE_MONITOR", monitor=self)
         self.deleted = True
-        if self.id in self.manager.monitors:
-            del self.manager.monitors[self.id]
-        if self.alert_id:
-            # Close any open alert immediately so it stops showing as active
-            # even if _purge is deferred until the in-flight check completes.
-            q = """update active_monitor_alerts set end_ts=%s where id=%s"""
-            q_args = (int(time.time()), self.alert_id)
-            await self.manager.dbcon.operation(q, q_args)
-            self.alert_id = None
-        if self.monitoring:
-            q = """update active_monitors set deleted=%s where id=%s"""
-            q_args = (True, self.id)
-            await self.manager.dbcon.operation(q, q_args)
-        else:
-            await self._purge()
+        removed_monitor = self.manager.monitors.pop(self.id, None)
+        try:
+            if self.alert_id:
+                # Close any open alert immediately so it stops showing as active
+                # even if _purge is deferred until the in-flight check completes.
+                q = """update active_monitor_alerts set end_ts=%s where id=%s"""
+                q_args = (int(time.time()), self.alert_id)
+                await self.manager.dbcon.operation(q, q_args)
+                self.alert_id = None
+            if self.monitoring:
+                q = """update active_monitors set deleted=%s where id=%s"""
+                q_args = (True, self.id)
+                await self.manager.dbcon.operation(q, q_args)
+            else:
+                await self._purge()
+        except Exception:
+            # The database write failed, undo the in-memory deletion so the
+            # monitor doesn't vanish from the running process while it still
+            # exists (not deleted) in the database - otherwise it would only
+            # reappear on the next restart, having never actually been
+            # removed.
+            self.deleted = False
+            if removed_monitor is not None:
+                self.manager.monitors[self.id] = removed_monitor
+            raise
 
     async def _purge(self) -> None:
         """Remove a monitor from the database."""
@@ -785,6 +839,7 @@ class ActiveMonitor(log.LoggingMixin):
     async def update_args(self, args: Dict[str, str]) -> None:
         self.log_msg("updating monitor arguments")
         self.monitor_def.validate_monitor_args(args)
+        old_args = self.args
         self.args = args
         self.monitor_def.tmpl_cache.flush_monitor(self)
         queries = []
@@ -795,33 +850,53 @@ class ActiveMonitor(log.LoggingMixin):
         for name, value in args.items():
             q_args = (self.id, name, value)
             queries.append((q, q_args))
-        await self.manager.dbcon.multi_operation(queries)
+        try:
+            await self.manager.dbcon.multi_operation(queries)
+        except Exception:
+            self.args = old_args
+            self.monitor_def.tmpl_cache.flush_monitor(self)
+            raise
 
     async def set_checks_enabled_status(self, checks_enabled: bool) -> None:
         if self.checks_enabled == checks_enabled:
             return
         self.log_debug("settings monitor checks to %s" % checks_enabled)
+        old_checks_enabled = self.checks_enabled
         self.checks_enabled = checks_enabled
-        if not checks_enabled:
-            await self.reset_monitor()
-        q = """update active_monitors set checks_enabled=%s where id=%s"""
-        q_args = (checks_enabled, self.id)
-        self.schedule_immediately()
-        await self.manager.dbcon.operation(q, q_args)
+        try:
+            if not checks_enabled:
+                await self.reset_monitor()
+            q = """update active_monitors set checks_enabled=%s where id=%s"""
+            q_args = (checks_enabled, self.id)
+            self.schedule_immediately()
+            await self.manager.dbcon.operation(q, q_args)
+        except Exception:
+            self.checks_enabled = old_checks_enabled
+            raise
 
     async def set_alerts_enabled_status(self, alerts_enabled: bool) -> None:
         if self.alerts_enabled == alerts_enabled:
             return
         self.log_debug("settings monitor alerts to %s" % alerts_enabled)
+        old_alerts_enabled = self.alerts_enabled
         self.alerts_enabled = alerts_enabled
         q = """update active_monitors set alerts_enabled=%s where id=%s"""
         q_args = (alerts_enabled, self.id)
-        await self.manager.dbcon.operation(q, q_args)
+        try:
+            await self.manager.dbcon.operation(q, q_args)
+        except Exception:
+            self.alerts_enabled = old_alerts_enabled
+            raise
 
     async def set_alias(self, alias: str) -> None:
+        old_alias = self.alias
         self.alias = alias
         q = """update active_monitors set alias=%s where id=%s"""
-        await self.manager.dbcon.operation(q, (alias, self.id))
+        try:
+            await self.manager.dbcon.operation(q, (alias, self.id))
+        except Exception:
+            self.alias = old_alias
+            raise
 
     def schedule_immediately(self) -> None:
         """Schedule a check for this monitor ASAP."""
@@ -843,6 +918,11 @@ class ActiveMonitor(log.LoggingMixin):
             self._pending_reset = True
             return
         self._pending_reset = False
+        old_state = self.state
+        old_state_ts = self.state_ts
+        old_msg = self.msg
+        old_consecutive_checks = self.consecutive_checks
+        old_alert_id = self.alert_id
         self.state = "UNKNOWN"
         self.state_ts = int(time.time())
         self.msg = ""
@@ -853,7 +933,15 @@ class ActiveMonitor(log.LoggingMixin):
                 await self.txn_close_alert(cur)
             await self.txn_save_state(cur)
 
-        await self.manager.dbcon.transact(_run)
+        try:
+            await self.manager.dbcon.transact(_run)
+        except Exception:
+            self.state = old_state
+            self.state_ts = old_state_ts
+            self.msg = old_msg
+            self.consecutive_checks = old_consecutive_checks
+            self.alert_id = old_alert_id
+            raise
 
 
 async def remove_deleted_monitors(dbcon: DBConnection) -> None:
